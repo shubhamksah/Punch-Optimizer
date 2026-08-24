@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punch Optimizer</title>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Advanced Enterprise Design System */
+        :root {
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --primary-faint: rgba(16, 185, 129, 0.08);
+            --bg-body: #f1f5f9;
+            --bg-surface: #ffffff;
+            --bg-sidebar: #0f172a;
+            --bg-sidebar-hover: #1e293b;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            
+            /* SPC Zones */
+            --zone-green: rgba(16, 185, 129, 0.1);
+            --zone-yellow: rgba(245, 158, 11, 0.15);
+            --zone-red: rgba(239, 68, 68, 0.1);
+            
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 8px 16px -4px rgba(0,0,0,0.05);
+            --shadow-float: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --transition: all 0.2s ease-out;
+        }
+
+        /* AGGRESSIVE TEXT SELECTION BLOCKER */
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Roboto', system-ui, -apple-system, sans-serif; 
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard */
+        }
+
+        /* Allow typing only in inputs and selects */
+        input, select, textarea {
+            -webkit-user-select: auto !important;
+            -ms-user-select: auto !important;
+            user-select: auto !important;
+        }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; font-size: 15px; }
+
+        /* Block spin buttons on numbers */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* Toast System */
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
+        .toast {
+            background: var(--bg-sidebar); color: #fff; padding: 14px 20px; border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-float); font-weight: 500; display: flex; align-items: center; gap: 12px; font-size: 1em;
+            transform: translateY(100px); opacity: 0; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast.success { border-left: 5px solid var(--success); }
+        .toast.error { border-left: 5px solid var(--danger); }
+        @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { to { transform: translateX(100px); opacity: 0; } }
+
+        /* Sidebar Navigation */
+        .sidebar { width: 120px; background-color: var(--bg-sidebar); color: #fff; display: flex; flex-direction: column; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.05); }
+        .brand { padding: 20px 10px; font-size: 0.85em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+        .brand-icon { width: 24px; height: 24px; background: var(--primary); border-radius: 6px; box-shadow: 0 0 12px var(--primary); }
+        .nav-menu { padding: 24px 8px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+        .nav-item { padding: 16px 8px; border-radius: var(--radius-md); cursor: pointer; color: #94a3b8; font-weight: 500; font-size: 0.85em; transition: var(--transition); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 8px; }
+        .nav-item svg { width: 32px; height: 32px; margin-bottom: 4px; }
+        .nav-item:hover { background-color: var(--bg-sidebar-hover); color: #fff; }
+        .nav-item.active { background-color: rgba(16, 185, 129, 0.15); color: var(--primary); font-weight: 600; border-left: 4px solid var(--primary); }
+
+        /* Workspace & Views */
+        .workspace { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 32px 40px; scroll-behavior: smooth; position: relative; }
+        .view-section { display: none; animation: fadeIn 0.25s ease; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Base Card Styling */
+        .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-sm); margin-bottom: 32px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .card-title { font-size: 1.25em; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 12px; }
+
+        /* Prominent Set Selector Banner */
+        .set-config-banner {
+            background: #f8fafc;
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px var(--primary-faint);
+        }
+        .set-config-info { display: flex; flex-direction: column; gap: 4px; }
+        .set-config-title { font-weight: 600; color: var(--text-main); font-size: 1.1em; text-transform: uppercase; letter-spacing: 0.5px; }
+        .set-config-sub { font-size: 0.9em; color: var(--text-muted); }
+        .set-config-input-wrap { display: flex; align-items: center; gap: 12px; }
+        .set-config-input-wrap input {
+            width: 100px;
+            padding: 10px 16px;
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--primary-hover);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            background: #fff;
+        }
+        .set-config-input-wrap input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-faint); }
+
+        /* Buttons */
+        .btn { padding: 12px 20px; border-radius: var(--radius-sm); font-size: 0.95em; font-weight: 500; cursor: pointer; transition: var(--transition); border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--text-main); color: #fff; width: 100%; padding: 16px; font-size: 1.05em; box-shadow: var(--shadow-sm); }
+        .btn-primary:hover { background: #334155; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn-accent { background: var(--primary); color: #fff; box-shadow: 0 4px 12px var(--primary-faint); }
+        .btn-accent:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-body); border-color: var(--text-muted); }
+
+        /* SPC Control Dashboard */
+        .global-stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .global-stat { background: var(--bg-surface); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm); }
+        .global-stat .lbl { font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+        .global-stat .val { font-size: 1.6em; font-weight: 600; color: var(--text-main); }
+        
+        .chart-wrapper { width: 100%; height: 480px; position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow: hidden; }
+        .mini-chart-wrapper { width: 100%; height: 260px; position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow: hidden; }
+        canvas { width: 100%; height: 100%; cursor: crosshair; }
+
+        /* Custom Tooltip */
+        #spc-tooltip {
+            position: absolute; pointer-events: none; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px);
+            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; box-shadow: var(--shadow-float);
+            opacity: 0; transition: opacity 0.15s ease; z-index: 100; min-width: 240px; font-size: 0.9em;
+        }
+        #spc-tooltip .tt-head { font-weight: 600; font-size: 1.05em; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+        #spc-tooltip .tt-row { display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 4px; font-weight: 400; }
+        #spc-tooltip .tt-row span.val { color: var(--text-main); font-weight: 500; font-size: 1em; }
+
+        /* Metadata Grid */
+        .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; background: #fff; padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .meta-field { display: flex; flex-direction: column; gap: 6px; }
+        .meta-field label { font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+        .meta-field input, .meta-field select { border: 1px solid var(--border); background: var(--bg-body); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 1em; font-weight: 400; color: var(--text-main); transition: var(--transition); cursor: text; }
+        .meta-field input:focus, .meta-field select:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 3px var(--primary-faint); }
+
+        /* Input Grids */
+        .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 24px; }
+        .entry-col-title { font-size: 0.9em; font-weight: 600; text-transform: uppercase; color: var(--text-main); margin-bottom: 16px; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        
+        .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg-body); border: 1px solid transparent; transition: var(--transition); }
+        .input-row:focus-within { background: #fff; border-color: var(--primary); }
+        .input-row label { font-size: 0.95em; font-weight: 500; color: var(--text-muted); width: 100px; cursor: default; }
+        .input-row input { flex: 1; max-width: 140px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1em; font-weight: 400; background: #fff; color: var(--text-main); cursor: text; }
+        .input-row input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-faint); }
+
+        /* Step 3 Line-by-Line Inputs */
+        .line-by-line-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+        .line-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-body); padding: 12px 20px; border-radius: var(--radius-md); border: 1px solid var(--border); transition: var(--transition); }
+        .line-item:focus-within { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-faint); }
+        .line-item .label-info { font-weight: 500; color: var(--text-main); font-size: 1em; display: flex; align-items: center; gap: 12px; cursor: default; }
+        .line-item .label-info span { background: var(--text-muted); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500; }
+        
+        .line-input-group { display: flex; align-items: center; gap: 16px; }
+        .line-target-text { font-size: 0.9em; color: var(--text-muted); font-weight: 400; cursor: default; }
+        .line-target-text span.val { color: var(--text-main); font-weight: 500; }
+        
+        .line-item input { width: 140px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.1em; font-weight: 500; background: #fff; color: var(--text-main); cursor: text; }
+        .line-item input:focus { outline: none; border-color: var(--primary); }
+
+        /* Impact Banner */
+        .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #fff; border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px; text-align: center; box-shadow: var(--shadow-sm); }
+        .stats-item .title { font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+        .stats-item .val { font-size: 1.2em; font-weight: 500; color: var(--text-main); margin-top: 4px; }
+
+        /* Pre-Assembly Pairing Cards */
+        .pairing-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 16px; }
+        .pairing-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); border-top: 6px solid var(--primary); text-align: center; }
+        .pairing-card .station-num { font-size: 0.85em; font-weight: 500; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+        .pairing-card .match-main { font-size: 1.1em; font-weight: 500; color: var(--text-main); margin-bottom: 4px; }
+
+        /* KPI Dashboard */
+        .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi-tile { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; text-align: center; box-shadow: var(--shadow-sm); }
+        .kpi-tile .lbl { font-size: 0.75em; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        .kpi-tile .val { font-size: 1.4em; font-weight: 500; color: var(--text-main); }
+        .kpi-tile.pass { border-bottom: 4px solid var(--success); }
+        .kpi-tile.pass .val { color: var(--success); font-weight: 600; }
+        .kpi-tile.fail { border-bottom: 4px solid var(--danger); }
+        .kpi-tile.fail .val { color: var(--danger); font-weight: 600; }
+
+        /* Swap Cards */
+        .swap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .swap-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); }
+        .swap-node { text-align: center; }
+        .swap-badge { background: var(--bg-body); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; font-weight: 500; font-size: 0.95em; display: block; margin-bottom: 4px; }
+        .swap-arrow { font-size: 1.4em; color: var(--primary); }
+        .swap-meta { text-align: right; border-left: 1px solid var(--border); padding-left: 16px; }
+        .swap-meta .lbl { font-size: 0.75em; text-transform: uppercase; color: var(--text-muted); font-weight: 500; display: block; }
+        .swap-meta .gap { font-size: 1.15em; font-weight: 500; color: var(--text-main); }
+
+        /* Standard Data Tables & Clickable Rows */
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1em; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+        .data-table th, .data-table td { padding: 16px 20px; text-align: center; border-bottom: 1px solid var(--border); }
+        .data-table th { background: var(--bg-sidebar); color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; position: sticky; top: 0; }
+        .data-table tbody tr { background: #fff; transition: var(--transition); }
+        .data-table tbody tr.clickable-row { cursor: pointer; }
+        .data-table tbody tr.clickable-row:hover { background-color: var(--primary-faint); }
+        .data-table tbody td { font-weight: 400; }
+
+        /* Modal Overlay */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.2s ease; }
+        .modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
+        .modal-content { background: var(--bg-surface); width: 95%; max-width: 1200px; max-height: 90vh; overflow-y: auto; padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); position: relative; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="spc-tooltip"></div>
+    <div id="toast-container"></div>
+    
+    <input type="file" id="importJsonFile" accept=".json" style="display:none" onchange="processJsonImport(event)">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"></div> 
+            Punch Optimizer
+        </div>
+        <nav class="nav-menu">
+            <div class="nav-item active" onclick="nav('view-spc', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                SPC Chart
+            </div>
+            <div class="nav-item" onclick="nav('view-entry', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                Workflow
+            </div>
+            <div class="nav-item" onclick="nav('view-log', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Audit Log
+            </div>
+        </nav>
+    </aside>
+
+    <main class="workspace">
+
+        <section id="view-spc" class="view-section active">
+            <div class="card" style="padding-bottom: 0;">
+                <div class="card-header">
+                    <div class="card-title">SPC Quality Control Dashboard</div>
+                    <button class="btn btn-outline" onclick="loadHistoryFromSharePoint()">Refresh Graph</button>
+                </div>
+
+                <div class="global-stats-banner">
+                    <div class="global-stat">
+                        <div class="lbl">Global Process Cp</div>
+                        <div class="val" id="gCp">-</div>
+                    </div>
+                    <div class="global-stat">
+                        <div class="lbl">Global Process Cpk</div>
+                        <div class="val" id="gCpk">-</div>
+                    </div>
+                    <div class="global-stat">
+                        <div class="lbl">Avg Run Range</div>
+                        <div class="val" id="gRange">-</div>
+                    </div>
+                    <div class="global-stat">
+                        <div class="lbl">Total Runs Tracked</div>
+                        <div class="val" id="gTotal">0</div>
+                    </div>
+                </div>
+
+                <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.95em;">
+                    Scatter Chart Tracking: Each vertical slice represents one run showing its Maximum, Minimum, and Mean (connected). 
+                    <br><span style="font-size: 0.9em;">Hover over vertical zones to inspect details. Green zone = Optimal Target (&plusmn; 0.0005).</span>
+                </p>
+                <div class="chart-wrapper" style="margin-bottom: 24px;">
+                    <div id="spc-tooltip"></div>
+                    <canvas id="spcCanvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-entry" class="view-section">
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Step 1: Run Metadata &amp; Raw Measurements</div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-outline" onclick="generateStage1TestData()">Fill P & H Data</button>
+                        <button class="btn btn-outline" onclick="clearInputs()">Clear All</button>
+                    </div>
+                </div>
+
+                <div class="meta-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="meta-field"><label>Operator</label><input type="text" id="opName" placeholder="e.g. Joe Operator"></div>
+                    <div class="meta-field">
+                        <label>Shift</label>
+                        <select id="shift"><option>1st Shift</option><option>2nd Shift</option><option>3rd Shift</option></select>
+                    </div>
+                    <div class="meta-field"><label>Date</label><input type="text" id="date" readonly></div>
+                    <div class="meta-field"><label>Time</label><input type="text" id="time" readonly></div>
+                    
+                    <div class="meta-field"><label>Punch Type/ID</label><input type="text" id="punchNum" placeholder="e.g. PM147"></div>
+                    <div class="meta-field"><label>Tool ID</label><input type="text" id="toolId" placeholder="e.g. TL-088"></div>
+                    <div class="meta-field"><label>Batch #</label><input type="text" id="batchNum" placeholder="e.g. 19266"></div>
+                    <div class="meta-field"><label>Press #</label><input type="text" id="pressNum" placeholder="e.g. 2"></div>
+                    
+                    <div class="meta-field"><label>Part #</label><input type="text" id="partNum" placeholder="e.g. 3-04"></div>
+                    <div class="meta-field"><label>Single Part Tol (&plusmn;)</label><input type="number" step="any" id="partTol" placeholder="0.00200"></div>
+                    <div class="meta-field"><label>Assembly Tol (&plusmn;)</label><input type="number" step="any" id="assemblyTol" placeholder="0.00400" title="Used for Stack Cpk Limits"></div>
+                    <div class="meta-field"><label>Range Spec (Max Spread)</label><input type="number" step="any" id="rangeSpec" placeholder="0.00150"></div>
+                </div>
+
+                <div class="set-config-banner">
+                    <div class="set-config-info">
+                        <div class="set-config-title">Active Station Setup Count</div>
+                        <div class="set-config-sub">Enter total number of punch/holder stations for this press setup</div>
+                    </div>
+                    <div class="set-config-input-wrap">
+                        <label style="font-weight: 500; color: var(--text-muted);">Total Sets:</label>
+                        <input type="number" id="numSets" value="12" min="1" max="50" onchange="buildInputGrids()" oninput="buildInputGrids()">
+                    </div>
+                </div>
+
+                <div class="entry-grid">
+                    <div>
+                        <div class="entry-col-title" id="punchColTitle">Individual Punches (P1 - P12)</div>
+                        <div id="punchInputs"></div>
+                    </div>
+                    <div>
+                        <div class="entry-col-title" id="holderColTitle">Individual Holders (H1 - H12)</div>
+                        <div id="holderInputs"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 20px; margin-bottom: 32px;">
+                    <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="punchVarianceCanvas"></canvas></div>
+                    <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="holderVarianceCanvas"></canvas></div>
+                </div>
+
+                <button class="btn btn-primary" onclick="calculateStage1Pairings()">Calculate Optimal Component Pairings &#10142;</button>
+            </div>
+
+            <div id="stage1ResultsCard" class="card hidden">
+                <div class="card-header">
+                    <div class="card-title">Step 2: Pre-Assembly Instructions (Match &amp; Build)</div>
+                </div>
+                
+                <div class="stats-banner">
+                    <div class="stats-item">
+                        <div class="title">Worst-Case Spread</div>
+                        <div id="worstRange" class="val" style="color: var(--danger);">-</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="title">Unoptimized Baseline</div>
+                        <div id="unoptRange" class="val">-</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="title">Optimized Spread</div>
+                        <div id="optRange" class="val" style="color: var(--primary);">-</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="title">Variance Reduction</div>
+                        <div id="reductionVal" class="val">-</div>
+                    </div>
+                </div>
+
+                <div class="mini-chart-wrapper" style="margin-bottom: 24px;">
+                    <canvas id="optTargetCanvas"></canvas>
+                </div>
+
+                <p style="margin-bottom: 20px; color: var(--text-muted); font-weight: 400; font-size: 1.05em;">
+                    Pair the holder and punch for each station exactly as shown below. <br>
+                    <span style="color: var(--text-main); font-weight: 500;">Set # corresponds directly to Holder # (e.g. Set 1 uses Holder 1).</span>
+                </p>
+                <div id="pairingCardsGrid" class="pairing-cards-grid"></div>
+            </div>
+
+            <div id="stage2VerificationCard" class="card hidden">
+                <div class="card-header">
+                    <div class="card-title">Step 3: Enter Assembled Total Lengths</div>
+                    <button class="btn btn-outline" onclick="generateStage3TestData()">Fill Assembled Data</button>
+                </div>
+                <p style="margin-bottom: 24px; color: var(--text-muted); font-weight: 400; font-size: 1.05em;">
+                    Once assembled on the press, measure each station sequentially down the line and enter its total combined height below. Compare actuals to the target generated in Step 2.
+                </p>
+                
+                <div id="lineByLineContainer" class="line-by-line-container"></div>
+
+                <button class="btn btn-primary" onclick="verifyAssembledPress()">Verify Press Assembly &amp; Generate Dashboard &#10142;</button>
+            </div>
+
+            <div id="resultsDashboard" class="hidden">
+                <div class="kpi-row">
+                    <div class="kpi-tile" id="kpiStatusTile">
+                        <div class="lbl">Setup Status</div>
+                        <div class="val" id="valStatus">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Measured Range</div>
+                        <div class="val" id="valRange">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Process Mean</div>
+                        <div class="val" id="valMean">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Cpk Index</div>
+                        <div class="val" id="valCpk">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Std Dev (&sigma;)</div>
+                        <div class="val" id="valSigma">-</div>
+                    </div>
+                </div>
+
+                <div class="mini-chart-wrapper" style="margin-bottom: 24px; height: 300px;">
+                    <canvas id="actualVsTargetCanvas"></canvas>
+                </div>
+
+                <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px;">
+                    <div class="card-title" style="font-size: 1.1em;">Required Action: Punch Fine-Tuning Swaps</div>
+                </div>
+                <div id="swapGrid" class="swap-grid"></div>
+            </div>
+
+        </section>
+
+        <section id="view-log" class="view-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Master Setup Audit Log</div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-outline" onclick="clearHistory()">Clear Data</button>
+                        <button class="btn btn-outline" onclick="importJsonData()">Restore (JSON)</button>
+                        <button class="btn btn-outline" onclick="exportJsonData()">Backup (JSON)</button>
+                        <button class="btn btn-accent" onclick="exportToAdvancedExcel()">Export Multi-Sheet Excel</button>
+                    </div>
+                </div>
+                <p style="margin-bottom: 24px; color: var(--text-muted); font-weight: 400; font-size: 1.05em;">
+                    Clicking Export will generate a complete Excel workbook. Every individual historical run is saved to its own dedicated, cleanly formatted worksheet containing all recorded measurements and statistics.
+                    <br><span style="color: var(--primary); font-weight: 500;">Click on any row below to instantly view its full run dashboard.</span>
+                </p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Operator</th>
+                            <th>Tool ID</th>
+                            <th>Batch</th>
+                            <th>Range</th>
+                            <th>Mean</th>
+                            <th>Cpk</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- HISTORICAL RUN OVERLAY MODAL -->
+    <div id="historyModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            
+            <div class="card-header" style="border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
+                <div class="card-title" style="font-size: 1.6em;">
+                    Historical Run Audit 
+                    <span id="modTitle" style="color:var(--text-muted); font-size:0.7em; margin-left:12px; font-weight:400;"></span>
+                </div>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <div id="modBigStatus" style="padding: 10px 24px; border-radius: var(--radius-sm); font-weight: 600; font-size: 1.25em; letter-spacing: 1px;"></div>
+                    <button class="btn btn-outline" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+
+            <div class="kpi-row" style="margin-bottom: 32px; grid-template-columns: repeat(5, 1fr);">
+                <div class="kpi-tile">
+                    <div class="lbl">Measured Range</div>
+                    <div class="val" id="modRange" style="color: var(--text-main);">-</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="lbl">Process Mean</div>
+                    <div class="val" id="modMean" style="color: var(--text-main);">-</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="lbl">Cpk Index</div>
+                    <div class="val" id="modCpk" style="color: var(--text-main);">-</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="lbl">Range Spec</div>
+                    <div class="val" id="modSpec" style="color: var(--text-main);">-</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="lbl">Total Sets Tracked</div>
+                    <div class="val" id="modNumSets" style="color: var(--text-main);">-</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; margin-bottom: 24px;">
+                <div class="mini-chart-wrapper" style="flex: 1; box-shadow: var(--shadow-sm);"><canvas id="modPunchVarianceCanvas"></canvas></div>
+                <div class="mini-chart-wrapper" style="flex: 1; box-shadow: var(--shadow-sm);"><canvas id="modHolderVarianceCanvas"></canvas></div>
+            </div>
+
+            <div class="mini-chart-wrapper" style="margin-bottom: 36px; height: 320px; box-shadow: var(--shadow-sm);">
+                <canvas id="modChartCanvas"></canvas>
+            </div>
+
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px;">
+                <div class="card-title" style="font-size: 1.25em;">Station-by-Station Pairings & Measurements</div>
+            </div>
+            <div style="overflow-x: auto; margin-bottom: 36px;">
+                <table class="data-table" style="border: 2px solid var(--border);">
+                    <thead style="background: var(--bg-sidebar); color: #fff;">
+                        <tr>
+                            <th style="padding: 16px;">Station</th>
+                            <th style="padding: 16px;">Optimized Pairing</th>
+                            <th>Punch Length</th>
+                            <th>Holder Length</th>
+                            <th>Target Height</th>
+                            <th>Actual Height</th>
+                            <th>Deviation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modMeasurementBody"></tbody>
+                </table>
+            </div>
+
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px;">
+                <div class="card-title" style="font-size: 1.1em;">Punch Fine-Tuning Swaps Identified</div>
+            </div>
+            <div id="modSwapGrid" class="swap-grid" style="margin-bottom: 32px;"></div>
+
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px; border-top: 1px solid var(--border); padding-top: 24px;">
+                <div class="card-title" style="font-size: 1.1em; color: var(--text-muted);">Run Metadata Reference</div>
+            </div>
+            <div class="meta-grid" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+                <div class="meta-field"><label>Operator</label><div id="modOp" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Tool ID</label><div id="modTool" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Batch #</label><div id="modBatch" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Press #</label><div id="modPress" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Part #</label><div id="modPart" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Shift</label><div id="modShift" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Part Tolerance (&plusmn;)</label><div id="modPartTol" style="font-weight:500; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Assembly Tolerance (&plusmn;)</label><div id="modAssmTol" style="font-weight:500; color:var(--text-main);"></div></div>
+            </div>
+            
+        </div>
+    </div>
+
+<script>
+    // --- Configuration: SharePoint Integration ---
+    // If hosting directly inside SharePoint, empty string evaluates relative to current site
+    const SP_SITE_URL = "https://schneiderelectric.sharepoint.com/sites/DigitalQuality-CedarRapidsGroup"; 
+    const SP_LIST_NAME = "PunchAssemblyAuditLog";
+
+    // --- Global State ---
+    let appHistory = [];
+    let activeStage1Pairs = [];
+    let spcRenderData = []; 
+
+    window.onload = function() {
+        updateDateTime();
+        buildInputGrids();
+        updateLiveCharts();
+        loadHistoryFromSharePoint();
+    };
+
+    function updateDateTime() {
+        const now = new Date();
+        document.getElementById('date').value = now.toLocaleDateString('en-US');
+        document.getElementById('time').value = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = type === 'success' ? `<span>&#10004;</span> ${msg}` : `<span>&#9888;</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.animation = 'slideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+
+    // --- SHAREPOINT REST API INTEGRATION ---
+    async function loadHistoryFromSharePoint() {
+        try {
+            const endpoint = `${SP_SITE_URL}/_api/web/lists/getbytitle('${SP_LIST_NAME}')/items?$top=500&$orderby=Created desc`;
+            const response = await fetch(endpoint, {
+                method: "GET",
+                headers: { "Accept": "application/json;odata=verbose" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Local/Offline mode active. Fallback to localStorage.");
+            }
+
+            const data = await response.json();
+            const items = data.d.results;
+
+            appHistory = items.map(item => ({
+                id: item.Id,
+                date: new Date(item.Created).toLocaleDateString('en-US'),
+                time: new Date(item.Created).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                op: item.Operator,
+                shift: item.Shift,
+                toolId: item.ToolID,
+                batch: item.BatchNum,
+                press: item.PressNum,
+                part: item.PartNum,
+                numSets: item.NumSets,
+                partTol: item.PartTol || "0.00200",
+                assemblyTol: item.AssemblyTol || "0.00400",
+                rangeSpec: item.RangeSpec ? item.RangeSpec.toFixed(5) : "0.00150",
+                range: item.MeasuredRange ? item.MeasuredRange.toFixed(5) : "0.00000",
+                mean: item.ProcessMean ? item.ProcessMean.toFixed(5) : "0.00000",
+                max: item.MaxHeight ? item.MaxHeight.toFixed(5) : "0.00000",
+                min: item.MinHeight ? item.MinHeight.toFixed(5) : "0.00000",
+                cpk: item.Cpk ? item.Cpk.toFixed(2) : "0.00",
+                status: item.Status,
+                components: item.ComponentsJSON ? JSON.parse(item.ComponentsJSON) : []
+            })).reverse();
+
+            renderLogTable();
+            calculateGlobalStats();
+            renderSpcChart();
+            showToast("SharePoint audit history loaded.", "success");
+        } catch (err) {
+            console.warn(err.message);
+            appHistory = JSON.parse(localStorage.getItem('punch_excel_history_v10') || '[]');
+            renderLogTable();
+            calculateGlobalStats();
+            renderSpcChart();
+        }
+    }
+
+    async function saveRunToSharePoint(rec) {
+        try {
+            const digestResponse = await fetch(`${SP_SITE_URL}/_api/contextinfo`, {
+                method: "POST",
+                headers: { "Accept": "application/json;odata=verbose" }
+            });
+            
+            if (!digestResponse.ok) throw new Error("Offline or non-SharePoint context.");
+
+            const digestData = await digestResponse.json();
+            const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+
+            const payload = {
+                "__metadata": { "type": "SP.Data.PunchAssemblyAuditLogListItem" },
+                "Title": `${rec.batch}-${rec.press}-${Date.now()}`,
+                "Operator": rec.op,
+                "Shift": rec.shift,
+                "ToolID": rec.toolId,
+                "BatchNum": rec.batch,
+                "PressNum": rec.press,
+                "PartNum": rec.part,
+                "NumSets": parseInt(rec.numSets),
+                "PartTol": rec.partTol,
+                "AssemblyTol": rec.assemblyTol,
+                "RangeSpec": parseFloat(rec.rangeSpec),
+                "MeasuredRange": parseFloat(rec.range),
+                "ProcessMean": parseFloat(rec.mean),
+                "MaxHeight": parseFloat(rec.max),
+                "MinHeight": parseFloat(rec.min),
+                "Cpk": parseFloat(rec.cpk),
+                "Status": rec.status,
+                "ComponentsJSON": JSON.stringify(rec.components)
+            };
+
+            const postResponse = await fetch(`${SP_SITE_URL}/_api/web/lists/getbytitle('${SP_LIST_NAME}')/items`, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json;odata=verbose",
+                    "Content-Type": "application/json;odata=verbose",
+                    "X-RequestDigest": requestDigest
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (postResponse.ok) {
+                showToast("Run logged to SharePoint list.", "success");
+                await loadHistoryFromSharePoint();
+            } else {
+                throw new Error("SharePoint write rejected.");
+            }
+        } catch (err) {
+            console.warn("SharePoint unavailable, saving locally:", err.message);
+            appHistory.push(rec);
+            localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
+            renderLogTable();
+            calculateGlobalStats();
+            renderSpcChart();
+            showToast("Logged to local cache (SharePoint unreachable).", "success");
+        }
+    }
+
+    // --- Dynamically fetch statistical constant d2 based on subgroup size n ---
+    function getD2(n) {
+        const d2Table = { 2:1.128, 3:1.693, 4:2.059, 5:2.326, 6:2.534, 7:2.704, 8:2.847, 9:2.970, 10:3.078, 11:3.173, 12:3.258, 13:3.336, 14:3.407, 15:3.472, 16:3.532, 17:3.588, 18:3.640, 19:3.689, 20:3.735, 21:3.778, 22:3.819, 23:3.858, 24:3.895, 25:3.931 };
+        if (n < 2) return 1.128;
+        if (d2Table[n]) return d2Table[n];
+        return 3.931 + ((n - 25) * 0.03);
+    }
+
+    // --- Build DOM Elements ---
+    function buildInputGrids() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        const pCont = document.getElementById('punchInputs');
+        const hCont = document.getElementById('holderInputs');
+        const lineCont = document.getElementById('lineByLineContainer');
+        
+        document.getElementById('punchColTitle').innerText = `Individual Punches (P1 - P${count})`;
+        document.getElementById('holderColTitle').innerText = `Individual Holders (H1 - H${count})`;
+
+        pCont.innerHTML = '';
+        hCont.innerHTML = '';
+        lineCont.innerHTML = '';
+        
+        for (let i=1; i<=count; i++) {
+            pCont.innerHTML += `<div class="input-row"><label>P${i}</label><input type="number" id="p${i}" data-grp="p" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
+            hCont.innerHTML += `<div class="input-row"><label>H${i}</label><input type="number" id="h${i}" data-grp="h" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
+            
+            lineCont.innerHTML += `
+                <div class="line-item">
+                    <div class="label-info">Set ${i} <span id="lblMatch${i}">Pending</span></div>
+                    <div class="line-input-group">
+                        <div class="line-target-text" id="lblTarget${i}">Target: --</div>
+                        <input type="number" id="cmb${i}" data-grp="cmb" data-idx="${i}" placeholder="0.00000">
+                    </div>
+                </div>`;
+        }
+        updateLiveCharts();
+    }
+
+    // --- Keyboard Navigation ---
+    document.addEventListener('keydown', function(e) {
+        if(e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+            if(e.key === '-' || e.key === 'Subtract' || e.key === 'e' || e.key === 'E' || e.key === '+') { e.preventDefault(); return; }
+            let grp = e.target.getAttribute('data-grp');
+            let idx = parseInt(e.target.getAttribute('data-idx'));
+            let count = parseInt(document.getElementById('numSets').value) || 12;
+            if (!grp) return;
+
+            if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                e.preventDefault();
+                if (idx < count) { let next = document.getElementById(`${grp}${idx + 1}`); if (next) { next.focus(); next.select(); } }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (idx > 1) { let prev = document.getElementById(`${grp}${idx - 1}`); if (prev) { prev.focus(); prev.select(); } }
+            }
+        }
+    });
+
+    function generateStage1TestData() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        document.getElementById('opName').value = "Joe Operator";
+        document.getElementById('punchNum').value = "PM147";
+        document.getElementById('toolId').value = "TL-088";
+        document.getElementById('batchNum').value = "19266";
+        document.getElementById('pressNum').value = "2";
+        document.getElementById('partNum').value = "3-04";
+        document.getElementById('partTol').value = "0.00200";
+        document.getElementById('assemblyTol').value = "0.00400";
+        document.getElementById('rangeSpec').value = "0.00150";
+
+        for (let i=1; i<=count; i++) {
+            document.getElementById(`p${i}`).value = (0.88400 + (Math.random() * 0.00080)).toFixed(5);
+            document.getElementById(`h${i}`).value = (5.82600 + (Math.random() * 0.00120)).toFixed(5);
+        }
+        updateLiveCharts();
+        showToast("Randomized Punch & Holder test data populated.");
+    }
+
+    function generateStage3TestData() {
+        if(activeStage1Pairs.length === 0) return showToast("Calculate Optimal Pairings first!", "error");
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        for (let i=1; i<=count; i++) {
+            let ref = activeStage1Pairs.find(p => p.hId === i);
+            if(ref) {
+                let variance = (Math.random() * 0.00040) - 0.00020;
+                document.getElementById(`cmb${i}`).value = (ref.expTotal + variance).toFixed(5);
+            }
+        }
+        showToast("Randomized Assembled measurement test data populated.");
+    }
+
+    function clearInputs() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        document.getElementById('opName').value = '';
+        document.getElementById('punchNum').value = '';
+        document.getElementById('toolId').value = '';
+        document.getElementById('batchNum').value = '';
+        document.getElementById('pressNum').value = '';
+        document.getElementById('partNum').value = '';
+        document.getElementById('partTol').value = '';
+        document.getElementById('assemblyTol').value = '';
+        document.getElementById('rangeSpec').value = '';
+
+        for (let i=1; i<=count; i++) {
+            let p = document.getElementById(`p${i}`); if (p) p.value = '';
+            let h = document.getElementById(`h${i}`); if (h) h.value = '';
+            let cmb = document.getElementById(`cmb${i}`); if (cmb) cmb.value = '';
+        }
+        document.getElementById('stage1ResultsCard').classList.add('hidden');
+        document.getElementById('stage2VerificationCard').classList.add('hidden');
+        document.getElementById('resultsDashboard').classList.add('hidden');
+        activeStage1Pairs = [];
+        updateLiveCharts();
+        showToast("Inputs cleared.");
+    }
+
+    function nav(viewId, element) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+        element.classList.add('active');
+        
+        if(viewId === 'view-spc') {
+            calculateGlobalStats();
+            renderSpcChart();
+        }
+    }
+
+    function updateLiveCharts() {
+        let count = parseInt(document.getElementById('numSets').value) || 12;
+        let pData = [], hData = [];
+        for(let i=1; i<=count; i++) {
+            let pEl = document.getElementById(`p${i}`);
+            let hEl = document.getElementById(`h${i}`);
+            let pv = parseFloat(pEl ? pEl.value : null);
+            let hv = parseFloat(hEl ? hEl.value : null);
+            pData.push(isNaN(pv) ? null : pv);
+            hData.push(isNaN(hv) ? null : hv);
+        }
+        drawMiniChart('punchVarianceCanvas', pData, 'Punch Length Variance (Raw)', '#3b82f6', 'Punch');
+        drawMiniChart('holderVarianceCanvas', hData, 'Holder Length Variance (Raw)', '#f59e0b', 'Holder');
+    }
+
+    function drawMiniChart(canvasId, data, title, colorHex, xLabelPrefix) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const wrapper = canvas.parentElement;
+        const rect = wrapper.getBoundingClientRect();
+        
+        if(rect.width === 0) return; 
+
+        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
+        const w = rect.width; const h = rect.height;
+        ctx.clearRect(0,0, w, h);
+
+        let validData = data.filter(d => d !== null);
+        if(validData.length === 0) {
+            ctx.fillStyle = '#cbd5e1'; ctx.font = '500 14px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('Awaiting Data to Plot...', w/2, h/2);
+            return;
+        }
+
+        let min = Math.min(...validData); let max = Math.max(...validData);
+        let range = max - min;
+        let padY = 45, padX = 65, padRight = 25;
+        let plotW = w - padX - padRight; let plotH = h - padY * 2;
+        
+        let yMin = min - (range === 0 ? 0.0005 : range * 0.2);
+        let yMax = max + (range === 0 ? 0.0005 : range * 0.2);
+        
+        const getX = i => padX + (i * (plotW / Math.max(1, data.length - 1)));
+        const getY = v => padY + plotH - (((v - yMin) / (yMax - yMin)) * plotH);
+
+        ctx.fillStyle = '#1e293b'; ctx.font = '600 13px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(title, padX, 22);
+
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padX, padY); ctx.lineTo(w-padRight, padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX, padY+plotH); ctx.lineTo(w-padRight, padY+plotH); ctx.stroke();
+        
+        ctx.fillStyle = '#64748b'; ctx.font = '500 10px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(yMax.toFixed(5), padX - 10, padY + 4);
+        ctx.fillText(yMin.toFixed(5), padX - 10, padY + plotH + 4);
+
+        let mean = validData.reduce((a,b)=>a+b,0) / validData.length;
+        ctx.strokeStyle = '#cbd5e1'; ctx.setLineDash([4,4]);
+        ctx.beginPath(); ctx.moveTo(padX, getY(mean)); ctx.lineTo(w-padRight, getY(mean)); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = colorHex; ctx.lineWidth = 2.5; ctx.beginPath();
+        let first = true;
+        for(let i=0; i<data.length; i++) {
+            if(data[i] !== null) {
+                if(first) { ctx.moveTo(getX(i), getY(data[i])); first = false; }
+                else { ctx.lineTo(getX(i), getY(data[i])); }
+            }
+        }
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        for(let i=0; i<data.length; i++) {
+            if(data[i] !== null) {
+                let dx = getX(i); let dy = getY(data[i]);
+                ctx.fillStyle = colorHex; ctx.beginPath(); ctx.arc(dx, dy, 4.5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dx, dy, 2, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(`${xLabelPrefix.charAt(0)}${i+1}`, getX(i), padY + plotH + 20);
+        }
+    }
+
+    function drawDualLineChart(canvasId, targets, actuals, title) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const wrapper = canvas.parentElement;
+        const rect = wrapper.getBoundingClientRect();
+        
+        if(rect.width === 0) return; 
+
+        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
+        const w = rect.width; const h = rect.height;
+        ctx.clearRect(0,0, w, h);
+
+        let validActs = actuals.filter(d => d !== null && !isNaN(d));
+        if(validActs.length === 0) return;
+
+        let allPoints = [...targets, ...validActs];
+        let min = Math.min(...allPoints); let max = Math.max(...allPoints);
+        let range = max - min;
+        let padY = 50, padX = 70, padRight = 35;
+        let plotW = w - padX - padRight; let plotH = h - padY * 2;
+        
+        let yMin = min - (range === 0 ? 0.0005 : range * 0.15);
+        let yMax = max + (range === 0 ? 0.0005 : range * 0.15);
+        
+        const getX = i => padX + (i * (plotW / Math.max(1, targets.length - 1)));
+        const getY = v => padY + plotH - (((v - yMin) / (yMax - yMin)) * plotH);
+
+        ctx.fillStyle = '#1e293b'; ctx.font = '600 14px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(title, padX, 22);
+
+        ctx.font = '500 12px sans-serif';
+        ctx.fillStyle = '#94a3b8'; ctx.fillRect(w - padRight - 150, 12, 12, 12); ctx.fillText('Target (Calculated)', w - padRight - 130, 22);
+        ctx.fillStyle = '#10b981'; ctx.fillRect(w - padRight - 250, 12, 12, 12); ctx.fillText('Actual (Measured)', w - padRight - 230, 22);
+
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padX, padY); ctx.lineTo(w-padRight, padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX, padY+plotH); ctx.lineTo(w-padRight, padY+plotH); ctx.stroke();
+        
+        ctx.fillStyle = '#64748b'; ctx.font = '500 11px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(yMax.toFixed(5), padX - 10, padY + 4);
+        ctx.fillText(yMin.toFixed(5), padX - 10, padY + plotH + 4);
+
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2.5; ctx.setLineDash([4,4]); ctx.beginPath();
+        targets.forEach((v, i) => i===0 ? ctx.moveTo(getX(i), getY(v)) : ctx.lineTo(getX(i), getY(v)));
+        ctx.stroke(); ctx.setLineDash([]);
+        targets.forEach((v, i) => {
+            ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.arc(getX(i), getY(v), 4, 0, Math.PI*2); ctx.fill();
+        });
+
+        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.beginPath();
+        let first = true;
+        for(let i=0; i<actuals.length; i++) {
+            if(actuals[i] !== null && !isNaN(actuals[i])) {
+                if(first) { ctx.moveTo(getX(i), getY(actuals[i])); first = false; }
+                else { ctx.lineTo(getX(i), getY(actuals[i])); }
+            }
+        }
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        for(let i=0; i<actuals.length; i++) {
+            if(actuals[i] !== null && !isNaN(actuals[i])) {
+                let dy = getY(actuals[i]);
+                let dev = Math.abs(actuals[i] - targets[i]);
+                ctx.fillStyle = dev > 0.0005 ? '#ef4444' : '#10b981'; 
+                ctx.beginPath(); ctx.arc(getX(i), dy, 5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(getX(i), dy, 2.5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(`Set ${i+1}`, getX(i), padY + plotH + 22);
+        }
+    }
+
+    // --- STEP 1: CALCULATE OPTIMAL PAIRINGS ---
+    function calculateStage1Pairings() {
+        updateDateTime();
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        let punches = [], holders = [];
+        let unoptTotals = [];
+
+        for (let i=1; i<=count; i++) {
+            let p = parseFloat(document.getElementById(`p${i}`).value);
+            let h = parseFloat(document.getElementById(`h${i}`).value);
+            if (isNaN(p) || isNaN(h)) return showToast("Missing measurements in row " + i, "error");
+            punches.push({id: i, v: p});
+            holders.push({id: i, v: h});
+            unoptTotals.push(p + h);
+        }
+
+        let unoptMin = Math.min(...unoptTotals);
+        let unoptMax = Math.max(...unoptTotals);
+        let unoptRange = unoptMax - unoptMin;
+
+        let pAsc = [...punches].sort((a,b) => a.v - b.v);
+        let hAsc = [...holders].sort((a,b) => a.v - b.v);
+        let hDesc = [...holders].sort((a,b) => b.v - a.v);
+
+        let worstTotals = [];
+        for (let i=0; i<count; i++) { worstTotals.push(pAsc[i].v + hAsc[i].v); }
+        let worstRange = Math.max(...worstTotals) - Math.min(...worstTotals);
+
+        activeStage1Pairs = [];
+        let optTotals = [];
+        for (let i=0; i<count; i++) {
+            let tot = pAsc[i].v + hDesc[i].v;
+            optTotals.push(tot);
+            activeStage1Pairs.push({ 
+                hId: hDesc[i].id, hV: hDesc[i].v,
+                pId: pAsc[i].id, pV: pAsc[i].v,
+                expTotal: tot 
+            });
+        }
+        activeStage1Pairs.sort((a,b) => a.hId - b.hId);
+
+        let optRange = Math.max(...optTotals) - Math.min(...optTotals);
+        let diffRange = unoptRange - optRange;
+        let pctRed = unoptRange > 0 ? ((diffRange / unoptRange) * 100).toFixed(1) : 0;
+
+        document.getElementById('worstRange').innerText = worstRange.toFixed(5);
+        document.getElementById('unoptRange').innerText = unoptRange.toFixed(5);
+        document.getElementById('optRange').innerText = optRange.toFixed(5);
+        document.getElementById('reductionVal').innerText = `-${diffRange.toFixed(5)} (${pctRed}%)`;
+
+        document.getElementById('stage1ResultsCard').classList.remove('hidden');
+        document.getElementById('stage2VerificationCard').classList.remove('hidden');
+
+        let pairedProfileData = activeStage1Pairs.map(p => p.expTotal);
+        drawMiniChart('optTargetCanvas', pairedProfileData, 'Predicted Component Profile (Flattened via Optimization)', '#10b981', 'S');
+
+        let grid = document.getElementById('pairingCardsGrid');
+        grid.innerHTML = '';
+        activeStage1Pairs.forEach(pair => {
+            let lbl = document.getElementById(`lblMatch${pair.hId}`);
+            if(lbl) lbl.innerText = `(Uses Punch ${pair.pId})`;
+
+            let targetLbl = document.getElementById(`lblTarget${pair.hId}`);
+            if(targetLbl) targetLbl.innerHTML = `Target: <span class="val">${pair.expTotal.toFixed(5)}"</span>`;
+
+            grid.innerHTML += `
+                <div class="pairing-card">
+                    <div class="station-num">Set ${pair.hId}</div>
+                    <div class="match-main">Holder ${pair.hId} + Punch ${pair.pId}</div>
+                </div>`;
+        });
+
+        showToast("Optimal pairings generated.", "success");
+        document.getElementById('stage1ResultsCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // --- STEP 3: VERIFY ASSEMBLED PRESS ---
+    async function verifyAssembledPress() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        let aTolRaw = document.getElementById('assemblyTol').value || document.getElementById('assemblyTol').placeholder;
+        let rSpecRaw = document.getElementById('rangeSpec').value || document.getElementById('rangeSpec').placeholder;
+        
+        let aTol = parseFloat(aTolRaw);
+        let rSpec = parseFloat(rSpecRaw);
+        if (isNaN(aTol) || isNaN(rSpec)) return showToast("Check Spec settings.", "error");
+
+        let combined = []; let totals = []; let targetsForGraph = [];
+        for (let i=1; i<=count; i++) {
+            let c = parseFloat(document.getElementById(`cmb${i}`).value);
+            if (isNaN(c)) return showToast(`Missing combined measurement for Station ${i}`, "error");
+            
+            let s1Ref = activeStage1Pairs.find(p => p.hId === i) || {pId: '?', pV: 0, hV: 0, expTotal: 0};
+            combined.push({ setId: i, punchId: s1Ref.pId, pVal: s1Ref.pV, hVal: s1Ref.hV, val: c });
+            totals.push(c);
+            targetsForGraph.push(s1Ref.expTotal);
+        }
+
+        let mean = totals.reduce((a,b)=>a+b,0) / count;
+        let min = Math.min(...totals); let max = Math.max(...totals);
+        let range = max - min;
+        let sigma = Math.sqrt(totals.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / count);
+        let isPass = range <= rSpec;
+
+        let USL = mean + aTol; let LSL = mean - aTol;
+        let Cpk = sigma > 0 ? Math.min((USL - mean)/(3*sigma), (mean - LSL)/(3*sigma)) : 0;
+
+        document.getElementById('valRange').innerText = range.toFixed(5);
+        document.getElementById('valMean').innerText = mean.toFixed(5);
+        document.getElementById('valSigma').innerText = sigma.toFixed(5);
+        document.getElementById('valCpk').innerText = Cpk.toFixed(2);
+        document.getElementById('valStatus').innerText = isPass ? 'PASS' : 'FAIL';
+        document.getElementById('kpiStatusTile').className = `kpi-tile ${isPass ? 'pass' : 'fail'}`;
+
+        document.getElementById('resultsDashboard').classList.remove('hidden');
+
+        drawDualLineChart('actualVsTargetCanvas', targetsForGraph, totals, 'Target Assembly Height vs. Actual Measured Height');
+
+        let sorted = [...combined].sort((a,b) => b.val - a.val);
+        let swapGrid = document.getElementById('swapGrid');
+        swapGrid.innerHTML = ''; let swapsFound = false;
+
+        let numSwapsToDisplay = Math.min(3, Math.floor(count / 2));
+        for(let k=0; k<numSwapsToDisplay; k++) {
+            let hi = sorted[k], lo = sorted[(count - 1) - k];
+            let gap = hi.val - lo.val;
+            if (gap > 0.00001) {
+                swapsFound = true;
+                swapGrid.innerHTML += `
+                    <div class="swap-card">
+                        <div class="swap-node"><span class="swap-badge">SET ${hi.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:500;">Punch ${hi.punchId}</span></div>
+                        <div class="swap-arrow">&#10142;</div>
+                        <div class="swap-node"><span class="swap-badge">SET ${lo.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:500;">Punch ${lo.punchId}</span></div>
+                        <div class="swap-meta"><span class="lbl">Measured Gap</span><span class="gap">${gap.toFixed(5)}"</span></div>
+                    </div>`;
+            }
+        }
+        if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--primary); font-weight:500; font-size:1.05em; box-shadow:none; text-align:center;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
+
+        let rec = {
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            op: document.getElementById('opName').value || document.getElementById('opName').placeholder,
+            shift: document.getElementById('shift').value,
+            toolId: document.getElementById('toolId').value || document.getElementById('toolId').placeholder,
+            batch: document.getElementById('batchNum').value || document.getElementById('batchNum').placeholder,
+            press: document.getElementById('pressNum').value || document.getElementById('pressNum').placeholder,
+            part: document.getElementById('partNum').value || document.getElementById('partNum').placeholder,
+            numSets: count,
+            partTol: document.getElementById('partTol').value || document.getElementById('partTol').placeholder,
+            assemblyTol: aTol.toFixed(5),
+            rangeSpec: rSpec.toFixed(5),
+            range: range.toFixed(5),
+            mean: mean.toFixed(5),
+            max: max.toFixed(5), 
+            min: min.toFixed(5),
+            cpk: Cpk.toFixed(2),
+            status: isPass ? 'PASS' : 'FAIL',
+            components: combined 
+        };
+        
+        await saveRunToSharePoint(rec);
+        document.getElementById('resultsDashboard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // --- HISTORICAL RUN MODAL VIEWER ---
+    function viewHistoryRun(origIndex) {
+        let r = appHistory[origIndex];
+        if(!r) return;
+
+        document.getElementById('modTitle').innerText = `(${r.date} ${r.time})`;
+        let bigStat = document.getElementById('modBigStatus');
+        bigStat.innerText = r.status;
+        bigStat.style.backgroundColor = r.status === 'PASS' ? 'var(--success)' : 'var(--danger)';
+        bigStat.style.color = '#fff';
+
+        document.getElementById('modOp').innerText = r.op;
+        document.getElementById('modTool').innerText = r.toolId || 'N/A';
+        document.getElementById('modBatch').innerText = r.batch;
+        document.getElementById('modPress').innerText = r.press;
+        document.getElementById('modPart').innerText = r.part || '-';
+        document.getElementById('modShift').innerText = r.shift || '-';
+        document.getElementById('modPartTol').innerText = r.partTol || '-';
+        document.getElementById('modAssmTol').innerText = r.assemblyTol || '-';
+
+        document.getElementById('modRange').innerText = r.range;
+        document.getElementById('modMean').innerText = r.mean;
+        document.getElementById('modCpk').innerText = r.cpk;
+        document.getElementById('modSpec').innerText = r.rangeSpec;
+        document.getElementById('modNumSets').innerText = r.numSets || 12;
+
+        let tableBody = document.getElementById('modMeasurementBody');
+        tableBody.innerHTML = '';
+        if(r.components && r.components.length > 0) {
+            r.components.forEach(c => {
+                let target = parseFloat(c.pVal) + parseFloat(c.hVal);
+                let actual = parseFloat(c.val);
+                let diff = actual - target;
+                
+                let isBad = Math.abs(diff) > 0.0005;
+                let diffStyle = isBad 
+                    ? 'background: #fef2f2; color: #ef4444; padding: 6px 12px; border-radius: 6px; border: 1px solid #f87171;' 
+                    : 'background: #ecfdf5; color: #10b981; padding: 6px 12px; border-radius: 6px; border: 1px solid #34d399;';
+
+                tableBody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: 600; font-size: 1.1em; color: var(--text-main);">Set ${c.setId}</td>
+                        <td><span style="background: var(--bg-body); padding: 6px 16px; border-radius: 6px; font-weight: 500; border: 2px solid var(--border); color: var(--primary-hover);">Holder ${c.setId} + Punch ${c.punchId}</span></td>
+                        <td style="color: var(--text-muted); font-weight: 500;">${parseFloat(c.pVal).toFixed(5)}"</td>
+                        <td style="color: var(--text-muted); font-weight: 500;">${parseFloat(c.hVal).toFixed(5)}"</td>
+                        <td style="color: var(--text-muted); font-weight: 500;">${target.toFixed(5)}"</td>
+                        <td style="font-weight: 600; font-size: 1.1em;">${actual.toFixed(5)}"</td>
+                        <td><span style="${diffStyle}; font-weight: 600; font-size: 1.05em;">${diff > 0 ? '+' : ''}${diff.toFixed(5)}"</span></td>
+                    </tr>
+                `;
+            });
+        } else {
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding: 24px;">No measurement data available for this older run.</td></tr>`;
+        }
+
+        document.getElementById('historyModal').classList.remove('hidden');
+
+        let pDataRaw = [];
+        let hDataRaw = [];
+        let count = r.numSets || 12;
+        
+        for(let i=0; i<count; i++) {
+            pDataRaw.push(null);
+            hDataRaw.push(null);
+        }
+
+        if(r.components && r.components.length > 0) {
+            r.components.forEach(c => {
+                let hIndex = parseInt(c.setId) - 1;
+                let pIndex = parseInt(c.punchId) - 1;
+                
+                if(hIndex >= 0 && hIndex < count) hDataRaw[hIndex] = parseFloat(c.hVal);
+                if(pIndex >= 0 && pIndex < count) pDataRaw[pIndex] = parseFloat(c.pVal);
+            });
+        }
+
+        drawMiniChart('modPunchVarianceCanvas', pDataRaw, 'Punch Length Variance (Raw)', '#3b82f6', 'Punch');
+        drawMiniChart('modHolderVarianceCanvas', hDataRaw, 'Holder Length Variance (Raw)', '#f59e0b', 'Holder');
+
+        let targets = [];
+        let actuals = [];
+        if(r.components && r.components.length > 0) {
+            r.components.forEach(c => {
+                targets.push(parseFloat(c.pVal) + parseFloat(c.hVal));
+                actuals.push(parseFloat(c.val));
+            });
+        }
+        drawDualLineChart('modChartCanvas', targets, actuals, 'Target Assembly Height vs. Actual Measured Height');
+
+        let swapGrid = document.getElementById('modSwapGrid');
+        swapGrid.innerHTML = '';
+        if(r.components && r.components.length > 0) {
+            let sorted = [...r.components].sort((a,b) => b.val - a.val);
+            let swapsFound = false;
+            let numSwapsToDisplay = Math.min(3, Math.floor(count / 2));
+            for(let k=0; k<numSwapsToDisplay; k++) {
+                let hi = sorted[k], lo = sorted[(count - 1) - k];
+                let gap = hi.val - lo.val;
+                if (gap > 0.00001) {
+                    swapsFound = true;
+                    swapGrid.innerHTML += `
+                        <div class="swap-card">
+                            <div class="swap-node"><span class="swap-badge">SET ${hi.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:500;">Punch ${hi.punchId}</span></div>
+                            <div class="swap-arrow">&#10142;</div>
+                            <div class="swap-node"><span class="swap-badge">SET ${lo.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:500;">Punch ${lo.punchId}</span></div>
+                            <div class="swap-meta"><span class="lbl">Measured Gap</span><span class="gap">${gap.toFixed(5)}"</span></div>
+                        </div>`;
+                }
+            }
+            if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--primary); font-weight:500; font-size:1.05em; box-shadow:none; text-align:center;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
+        } else {
+            swapGrid.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted);">No component data available for this older run.</div>`;
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('historyModal').classList.add('hidden');
+    }
+
+    window.addEventListener('click', function(e) {
+        let modal = document.getElementById('historyModal');
+        if (e.target === modal) closeModal();
+    });
+
+    // --- SPC SCATTER/LINE CONTROL CHART ---
+    function calculateGlobalStats() {
+        if(appHistory.length === 0) return;
+        let means = appHistory.map(r => parseFloat(r.mean));
+        let grandMean = means.reduce((a,b)=>a+b,0) / means.length;
+        
+        let sumVars = 0;
+        let validRuns = 0;
+        let totalRanges = 0;
+        
+        appHistory.forEach(r => {
+            let n = parseInt(r.numSets) || 12;
+            let d2 = getD2(n);
+            let R = parseFloat(r.range);
+            totalRanges += R;
+            let runVar = Math.pow(R / d2, 2);
+            sumVars += runVar;
+            validRuns++;
+        });
+        
+        let avgRange = validRuns > 0 ? totalRanges / validRuns : 0;
+        let globalSigma = validRuns > 0 ? Math.sqrt(sumVars / validRuns) : 0;
+        
+        let aTol = parseFloat(appHistory[appHistory.length-1].assemblyTol || appHistory[appHistory.length-1].partTol);
+        let USL = grandMean + aTol;
+        let LSL = grandMean - aTol;
+
+        let gCp = globalSigma > 0 ? (USL - LSL) / (6 * globalSigma) : 0;
+        let gCpk = globalSigma > 0 ? Math.min((USL - grandMean)/(3*globalSigma), (grandMean - LSL)/(3*globalSigma)) : 0;
+
+        document.getElementById('gCp').innerText = gCp.toFixed(2);
+        document.getElementById('gCpk').innerText = gCpk.toFixed(2);
+        document.getElementById('gRange').innerText = avgRange.toFixed(5);
+        document.getElementById('gTotal').innerText = appHistory.length;
+    }
+
+    function renderSpcChart() {
+        const canvas = document.getElementById('spcCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = canvas.parentElement;
+        const rect = wrapper.getBoundingClientRect();
+        
+        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
+        const w = rect.width; const h = rect.height;
+        ctx.clearRect(0,0, w, h);
+
+        if(appHistory.length === 0) {
+            ctx.fillStyle = '#64748b'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('No history data. Complete runs in Tab 2 to populate chart.', w/2, h/2);
+            return;
+        }
+
+        let padX = 75, padY = 50;
+        let plotW = w - padX*2, plotH = h - padY*2;
+        
+        let allMins = appHistory.map(r => parseFloat(r.min));
+        let allMaxs = appHistory.map(r => parseFloat(r.max));
+        let globalMin = Math.min(...allMins);
+        let globalMax = Math.max(...allMaxs);
+        
+        let means = appHistory.map(r => parseFloat(r.mean));
+        let grandMean = means.reduce((a,b)=>a+b,0) / means.length;
+
+        let yTop = globalMax + 0.0005;
+        let yBot = globalMin - 0.0005;
+
+        const getX = i => padX + (i * (plotW / Math.max(1, appHistory.length-1)));
+        const getY = v => padY + plotH - (((v - yBot) / (yTop - yBot)) * plotH);
+
+        let zGreenTop = getY(grandMean + 0.0005);
+        let zGreenBot = getY(grandMean - 0.0005);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.1)';
+        ctx.fillRect(padX, zGreenTop, plotW, zGreenBot - zGreenTop);
+
+        let avgRange = appHistory.map(r => parseFloat(r.range)).reduce((a,b)=>a+b,0) / appHistory.length;
+        let UCL = grandMean + (0.266 * avgRange); 
+        let LCL = grandMean - (0.266 * avgRange);
+
+        let yUCL = getY(UCL);
+        let yLCL = getY(LCL);
+
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
+        ctx.fillRect(padX, yUCL, plotW, zGreenTop - yUCL); 
+        ctx.fillRect(padX, zGreenBot, plotW, yLCL - zGreenBot); 
+
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+        ctx.fillRect(padX, padY, plotW, yUCL - padY); 
+        ctx.fillRect(padX, yLCL, plotW, plotH - (yLCL - padY)); 
+
+        ctx.strokeStyle = '#e2e8f0'; ctx.fillStyle = '#64748b'; ctx.font = '500 11px sans-serif'; ctx.textAlign = 'right';
+        for(let i=0; i<=6; i++) {
+            let v = yTop - (i*(yTop-yBot)/6); let y = getY(v);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
+            ctx.fillText(v.toFixed(4), padX-10, y+4);
+        }
+
+        ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
+        ctx.strokeStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(padX, yUCL); ctx.lineTo(w-padX, yUCL); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX, yLCL); ctx.lineTo(w-padX, yLCL); ctx.stroke();
+        
+        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(padX, getY(grandMean)); ctx.lineTo(w-padX, getY(grandMean)); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#ef4444'; ctx.textAlign = 'left';
+        ctx.fillText(`UCL: ${UCL.toFixed(4)}`, w - padX + 10, yUCL+4);
+        ctx.fillText(`LCL: ${LCL.toFixed(4)}`, w - padX + 10, yLCL+4);
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`AVG: ${grandMean.toFixed(4)}`, w - padX + 10, getY(grandMean)+4);
+
+        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.beginPath();
+        appHistory.forEach((r, i) => i===0 ? ctx.moveTo(getX(i), getY(parseFloat(r.mean))) : ctx.lineTo(getX(i), getY(parseFloat(r.mean))));
+        ctx.stroke();
+
+        spcRenderData = []; 
+
+        appHistory.forEach((r, i) => {
+            let x = getX(i);
+            let yMax = getY(parseFloat(r.max));
+            let yMin = getY(parseFloat(r.min));
+            let yMean = getY(parseFloat(r.mean));
+
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(x, yMax, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(x, yMin, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(x, yMean, 6, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.font = '500 10px sans-serif';
+            let dStr = r.date.split('/')[0] + '/' + r.date.split('/')[1];
+            ctx.fillText(dStr, x, h - 18);
+
+            spcRenderData.push({ x: x, data: r, runIdx: i+1 });
+        });
+
+        canvas.onmousemove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left);
+            const tooltip = document.getElementById('spc-tooltip');
+            
+            let closest = null; let minDx = Infinity;
+            for(let slice of spcRenderData) {
+                let dx = Math.abs(slice.x - x);
+                if(dx < minDx && dx < 30) { minDx = dx; closest = slice; }
+            }
+
+            if(closest) {
+                let r = closest.data;
+                tooltip.innerHTML = `
+                    <div class="tt-head">Run #${closest.runIdx} - ${r.date} ${r.time}</div>
+                    <div class="tt-row"><span>Operator:</span> <span class="val">${r.op}</span></div>
+                    <div class="tt-row"><span>Tool ID:</span> <span class="val">${r.toolId || 'N/A'}</span></div>
+                    <div class="tt-row"><span>Batch:</span> <span class="val">${r.batch}</span></div>
+                    <div class="tt-row" style="margin-top:8px;"><span>Max Height:</span> <span class="val" style="color:var(--danger)">${r.max}"</span></div>
+                    <div class="tt-row"><span>Process Mean:</span> <span class="val" style="color:var(--text-main)">${r.mean}"</span></div>
+                    <div class="tt-row"><span>Min Height:</span> <span class="val" style="color:#3b82f6">${r.min}"</span></div>
+                    <div class="tt-row" style="margin-top:8px;"><span>Measured Range:</span> <span class="val">${r.range}"</span></div>
+                    <div class="tt-row"><span>Status:</span> <span class="val" style="color: ${r.status === 'PASS' ? 'var(--success)' : 'var(--danger)'}">${r.status}</span></div>
+                `;
+                tooltip.style.opacity = '1';
+                
+                let ttX = e.clientX + 20; let ttY = e.clientY + 20;
+                if (ttX + 280 > window.innerWidth) ttX = e.clientX - 290;
+                if (ttY + 200 > window.innerHeight) ttY = e.clientY - 210;
+                
+                tooltip.style.left = ttX + 'px';
+                tooltip.style.top = ttY + 'px';
+            } else {
+                tooltip.style.opacity = '0';
+            }
+        };
+        canvas.onmouseleave = () => { document.getElementById('spc-tooltip').style.opacity = '0'; };
+    }
+
+    // --- LOGISTICS & PERSISTENCE ---
+    function renderLogTable() {
+        let t = document.getElementById('logBody'); t.innerHTML = '';
+        let reversed = appHistory.slice().reverse();
+        reversed.forEach((r, i) => {
+            let origIndex = appHistory.length - 1 - i;
+            t.innerHTML += `<tr class="clickable-row" onclick="viewHistoryRun(${origIndex})" title="Click to view full dashboard">
+                <td>${r.date} ${r.time}</td>
+                <td>${r.op}</td>
+                <td>${r.toolId || '-'}</td>
+                <td>${r.batch}</td>
+                <td style="font-weight: 500;">${r.range}</td>
+                <td>${r.mean}</td>
+                <td>${r.cpk}</td>
+                <td style="color:${r.status==='PASS'?'var(--success)':'var(--danger)'}; font-weight:500;">${r.status}</td>
+            </tr>`;
+        });
+    }
+
+    function clearHistory() {
+        if(confirm("Permanently delete all local historical audit logs? (Note: SharePoint logs must be deleted directly in the list)")) {
+            appHistory = [];
+            localStorage.removeItem('punch_excel_history_v10');
+            renderLogTable();
+            renderSpcChart();
+            calculateGlobalStats();
+            showToast("Local History Cleared.");
+        }
+    }
+
+    function exportJsonData() {
+        if(appHistory.length === 0) return showToast("No runs recorded to backup.", "error");
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appHistory));
+        let downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        let dateStr = new Date().toISOString().slice(0,10);
+        downloadAnchorNode.setAttribute("download", `Precision_Audit_Backup_${dateStr}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        showToast("JSON Backup downloaded successfully.", "success");
+    }
+
+    function importJsonData() {
+        document.getElementById('importJsonFile').click();
+    }
+
+    function processJsonImport(event) {
+        let file = event.target.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let importedData = JSON.parse(e.target.result);
+                if(Array.isArray(importedData)) {
+                    appHistory = importedData;
+                    localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
+                    renderLogTable(); 
+                    calculateGlobalStats(); 
+                    renderSpcChart();
+                    showToast("Audit data successfully restored from JSON.", "success");
+                } else {
+                    showToast("Invalid JSON file format.", "error");
+                }
+            } catch(err) {
+                showToast("Failed to read JSON file.", "error");
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function exportToAdvancedExcel() {
+        if(appHistory.length === 0) return showToast("No runs recorded to export.", "error");
+
+        try {
+            const wb = XLSX.utils.book_new();
+
+            const summaryData = [
+                ["Run Date", "Time", "Operator", "Shift", "Tool ID", "Batch #", "Press #", "Part #", "Number of Sets", "Range Spec", "Measured Range", "Mean", "Max", "Min", "Cpk", "Status"]
+            ];
+            
+            appHistory.forEach(r => {
+                summaryData.push([
+                    r.date, r.time, r.op, r.shift, r.toolId || "N/A", r.batch, r.press, r.part, r.numSets || 12,
+                    parseFloat(r.rangeSpec), parseFloat(r.range), parseFloat(r.mean), parseFloat(r.max), parseFloat(r.min), parseFloat(r.cpk), r.status
+                ]);
+            });
+
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Master Summary");
+
+            appHistory.forEach((r, index) => {
+                const sheetData = [
+                    ["METADATA"],
+                    ["Date", r.date],
+                    ["Time", r.time],
+                    ["Operator Name", r.op],
+                    ["Shift", r.shift],
+                    ["Tool ID", r.toolId || "N/A"],
+                    ["Batch #", r.batch],
+                    ["Press #", r.press],
+                    ["Part #", r.part],
+                    ["Number of Sets", r.numSets || 12],
+                    ["Part Tolerance", r.partTol],
+                    ["Assembly Tolerance", r.assemblyTol || "N/A"],
+                    [],
+                    ["PUNCH SETUP"],
+                    ["Range Spec (Max Spread)", r.rangeSpec],
+                    [],
+                    ["Set / Station #", "Punch Length", "Holder Length", "Measured Combined Height"]
+                ];
+
+                if(r.components && r.components.length > 0) {
+                    r.components.forEach(c => {
+                        sheetData.push([ c.setId, parseFloat(c.pVal), parseFloat(c.hVal), parseFloat(c.val) ]);
+                    });
+                } else {
+                    sheetData.push(["Data unavailable", "", "", ""]);
+                }
+
+                sheetData.push([]);
+                sheetData.push(["STATISTICS"]);
+                sheetData.push(["Measured Range", parseFloat(r.range)]);
+                sheetData.push(["Maximum Length", parseFloat(r.max)]);
+                sheetData.push(["Minimum Length", parseFloat(r.min)]);
+                sheetData.push(["Process Mean", parseFloat(r.mean)]);
+                sheetData.push(["Setup Status", r.status]);
+
+                const ws = XLSX.utils.aoa_to_sheet(sheetData);
+                let sheetName = `Run ${index + 1} - Batch ${r.batch}`.substring(0, 31);
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+
+            let dateStr = new Date().toISOString().slice(0,10);
+            XLSX.writeFile(wb, `Precision_Assembly_Audit_${dateStr}.xlsx`);
+            showToast("Excel Workbook Exported Successfully", "success");
+
+        } catch (err) {
+            console.error(err);
+            showToast("Export failed. Ensure internet connection to load SheetJS.", "error");
+        }
+    }
+</script>
+
+</body>
+</html>
