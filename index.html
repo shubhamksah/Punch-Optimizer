@@ -269,7 +269,7 @@
             <div class="card" style="padding-bottom: 0;">
                 <div class="card-header">
                     <div class="card-title">SPC Quality Control Dashboard</div>
-                    <button class="btn btn-outline" onclick="loadHistoryFromSharePoint()">Refresh Graph</button>
+                    <button class="btn btn-outline" onclick="loadHistoryFromStorage()">Refresh Graph</button>
                 </div>
 
                 <div class="global-stats-banner">
@@ -573,10 +573,8 @@
     </div>
 
 <script>
-    // --- Configuration: SharePoint Integration ---
-    // If hosting directly inside SharePoint, empty string evaluates relative to current site
-    const SP_SITE_URL = "https://schneiderelectric.sharepoint.com/sites/DigitalQuality-CedarRapidsGroup"; 
-    const SP_LIST_NAME = "PunchAssemblyAuditLog";
+    // --- Configuration: Power Automate Webhook Integration ---
+    const FLOW_WEBHOOK_URL = "https://default6e51e1adc54b4b39b5980ffe9ae68f.ef.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/40d8e1e4151f4e7aab30a77a5cc81833/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1K3xoDxPqFydzlgqwF5Y9cSO5zOCi3Sm6shm2L5t8Aw";
 
     // --- Global State ---
     let appHistory = [];
@@ -587,7 +585,7 @@
         updateDateTime();
         buildInputGrids();
         updateLiveCharts();
-        loadHistoryFromSharePoint();
+        loadHistoryFromStorage();
     };
 
     function updateDateTime() {
@@ -605,116 +603,62 @@
         setTimeout(() => { toast.style.animation = 'slideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
     }
 
-    // --- SHAREPOINT REST API INTEGRATION ---
-    async function loadHistoryFromSharePoint() {
+    function loadHistoryFromStorage() {
         try {
-            const endpoint = `${SP_SITE_URL}/_api/web/lists/getbytitle('${SP_LIST_NAME}')/items?$top=500&$orderby=Created desc`;
-            const response = await fetch(endpoint, {
-                method: "GET",
-                headers: { "Accept": "application/json;odata=verbose" }
-            });
-
-            if (!response.ok) {
-                throw new Error("Local/Offline mode active. Fallback to localStorage.");
-            }
-
-            const data = await response.json();
-            const items = data.d.results;
-
-            appHistory = items.map(item => ({
-                id: item.Id,
-                date: new Date(item.Created).toLocaleDateString('en-US'),
-                time: new Date(item.Created).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-                op: item.Operator,
-                shift: item.Shift,
-                toolId: item.ToolID,
-                batch: item.BatchNum,
-                press: item.PressNum,
-                part: item.PartNum,
-                numSets: item.NumSets,
-                partTol: item.PartTol || "0.00200",
-                assemblyTol: item.AssemblyTol || "0.00400",
-                rangeSpec: item.RangeSpec ? item.RangeSpec.toFixed(5) : "0.00150",
-                range: item.MeasuredRange ? item.MeasuredRange.toFixed(5) : "0.00000",
-                mean: item.ProcessMean ? item.ProcessMean.toFixed(5) : "0.00000",
-                max: item.MaxHeight ? item.MaxHeight.toFixed(5) : "0.00000",
-                min: item.MinHeight ? item.MinHeight.toFixed(5) : "0.00000",
-                cpk: item.Cpk ? item.Cpk.toFixed(2) : "0.00",
-                status: item.Status,
-                components: item.ComponentsJSON ? JSON.parse(item.ComponentsJSON) : []
-            })).reverse();
-
-            renderLogTable();
-            calculateGlobalStats();
-            renderSpcChart();
-            showToast("SharePoint audit history loaded.", "success");
-        } catch (err) {
-            console.warn(err.message);
             appHistory = JSON.parse(localStorage.getItem('punch_excel_history_v10') || '[]');
             renderLogTable();
             calculateGlobalStats();
             renderSpcChart();
+        } catch (err) {
+            console.warn("Storage load error:", err.message);
         }
     }
 
     async function saveRunToSharePoint(rec) {
+        // Optimistically record locally
+        appHistory.push(rec);
+        localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
+        renderLogTable();
+        calculateGlobalStats();
+        renderSpcChart();
+
+        const payload = {
+            date: rec.date,
+            time: rec.time,
+            op: rec.op,
+            shift: rec.shift,
+            toolId: rec.toolId,
+            batch: rec.batch,
+            press: rec.press,
+            part: rec.part,
+            numSets: parseInt(rec.numSets),
+            partTol: rec.partTol,
+            assemblyTol: rec.assemblyTol,
+            rangeSpec: rec.rangeSpec,
+            range: rec.range,
+            mean: rec.mean,
+            max: rec.max,
+            min: rec.min,
+            cpk: rec.cpk,
+            status: rec.status,
+            componentsJSON: JSON.stringify(rec.components)
+        };
+
         try {
-            const digestResponse = await fetch(`${SP_SITE_URL}/_api/contextinfo`, {
+            const response = await fetch(FLOW_WEBHOOK_URL, {
                 method: "POST",
-                headers: { "Accept": "application/json;odata=verbose" }
-            });
-            
-            if (!digestResponse.ok) throw new Error("Offline or non-SharePoint context.");
-
-            const digestData = await digestResponse.json();
-            const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
-
-            const payload = {
-                "__metadata": { "type": "SP.Data.PunchAssemblyAuditLogListItem" },
-                "Title": `${rec.batch}-${rec.press}-${Date.now()}`,
-                "Operator": rec.op,
-                "Shift": rec.shift,
-                "ToolID": rec.toolId,
-                "BatchNum": rec.batch,
-                "PressNum": rec.press,
-                "PartNum": rec.part,
-                "NumSets": parseInt(rec.numSets),
-                "PartTol": rec.partTol,
-                "AssemblyTol": rec.assemblyTol,
-                "RangeSpec": parseFloat(rec.rangeSpec),
-                "MeasuredRange": parseFloat(rec.range),
-                "ProcessMean": parseFloat(rec.mean),
-                "MaxHeight": parseFloat(rec.max),
-                "MinHeight": parseFloat(rec.min),
-                "Cpk": parseFloat(rec.cpk),
-                "Status": rec.status,
-                "ComponentsJSON": JSON.stringify(rec.components)
-            };
-
-            const postResponse = await fetch(`${SP_SITE_URL}/_api/web/lists/getbytitle('${SP_LIST_NAME}')/items`, {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json;odata=verbose",
-                    "Content-Type": "application/json;odata=verbose",
-                    "X-RequestDigest": requestDigest
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
-            if (postResponse.ok) {
-                showToast("Run logged to SharePoint list.", "success");
-                await loadHistoryFromSharePoint();
+            if (response.ok) {
+                showToast("Run logged to SharePoint List successfully.", "success");
             } else {
-                throw new Error("SharePoint write rejected.");
+                throw new Error(`Flow HTTP ${response.status}`);
             }
         } catch (err) {
-            console.warn("SharePoint unavailable, saving locally:", err.message);
-            appHistory.push(rec);
-            localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
-            renderLogTable();
-            calculateGlobalStats();
-            renderSpcChart();
-            showToast("Logged to local cache (SharePoint unreachable).", "success");
+            console.warn("Webhook sync error:", err.message);
+            showToast("Saved locally (Flow webhook sync pending).", "success");
         }
     }
 
@@ -1483,7 +1427,7 @@
     }
 
     function clearHistory() {
-        if(confirm("Permanently delete all local historical audit logs? (Note: SharePoint logs must be deleted directly in the list)")) {
+        if(confirm("Permanently delete all local historical audit logs?")) {
             appHistory = [];
             localStorage.removeItem('punch_excel_history_v10');
             renderLogTable();
