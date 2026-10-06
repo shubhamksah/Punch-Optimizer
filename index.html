@@ -23,23 +23,28 @@
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
+            --neutral-faint: #f1f5f9;
             
             --danger: #ef4444;
             --danger-bg: #fef2f2;
             --danger-border: #fca5a5;
             
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --warning-border: #fcd34d;
+            
             --success: #00A759;
             --success-bg: #ecfdf5;
             --success-border: #6ee7b7;
             
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 16px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
             
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
             --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.05);
             --shadow-float: 0 20px 30px -10px rgba(0,0,0,0.1);
-            --transition: all 0.2s ease-out;
+            --transition: all 0.25s ease-out;
         }
 
         * { 
@@ -82,7 +87,7 @@
 
         #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
         .toast {
-            background: var(--bg-sidebar); color: #fff; padding: 14px 20px; border-radius: var(--radius-sm);
+            background: var(--bg-sidebar); color: #fff; padding: 16px 24px; border-radius: var(--radius-sm);
             box-shadow: var(--shadow-float); font-weight: 500; display: flex; align-items: center; gap: 10px; font-size: 1.05em;
             transform: translateY(100px); opacity: 0; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
@@ -110,7 +115,7 @@
 
         .set-config-banner {
             background: var(--bg-body);
-            border: 2px solid var(--primary-faint);
+            border: 2px solid var(--border);
             border-radius: var(--radius-md);
             padding: 20px 24px;
             margin-bottom: 24px;
@@ -127,19 +132,19 @@
             padding: 10px 14px;
             font-size: 1.3em;
             font-weight: 700;
-            color: var(--primary-hover);
+            color: var(--text-main);
             border: 2px solid var(--border);
             border-radius: var(--radius-sm);
             text-align: center;
             background: #fff;
             transition: var(--transition);
         }
-        .set-config-input-wrap input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-faint); }
+        .set-config-input-wrap input:focus { outline: none; border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); }
 
         .btn { padding: 12px 20px; border-radius: var(--radius-sm); font-size: 0.95em; font-weight: 600; cursor: pointer; transition: var(--transition); border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.5px; }
         .btn-primary { background: var(--text-main); color: #fff; width: 100%; padding: 16px; font-size: 1.05em; box-shadow: var(--shadow-sm); }
         .btn-primary:hover { background: #334155; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-        .btn-accent { background: var(--primary); color: #fff; box-shadow: 0 4px 12px var(--primary-faint); }
+        .btn-accent { background: var(--primary-dark); color: #fff; box-shadow: 0 4px 12px var(--primary-faint); }
         .btn-accent:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px var(--primary-faint); }
         .btn-outline { background: #fff; border: 2px solid var(--border); color: var(--text-main); }
         .btn-outline:hover { background: var(--bg-body); border-color: var(--text-muted); }
@@ -166,38 +171,38 @@
         .meta-field { display: flex; flex-direction: column; gap: 6px; }
         .meta-field label { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
         .meta-field input, .meta-field select { border: 2px solid var(--border); background: var(--bg-body); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 1.05em; font-weight: 500; color: var(--text-main); transition: var(--transition); cursor: text; }
-        .meta-field input:focus, .meta-field select:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 3px var(--primary-faint); }
+        .meta-field input:focus, .meta-field select:focus { border-color: var(--text-muted); outline: none; background: #fff; box-shadow: 0 0 0 3px var(--neutral-faint); }
 
         .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px; }
         .entry-col-title { font-size: 0.95em; font-weight: 700; text-transform: uppercase; color: var(--text-main); margin-bottom: 16px; letter-spacing: 1px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
         
         .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg-body); border: 2px solid transparent; transition: var(--transition); }
-        .input-row:focus-within { background: #fff; border-color: var(--primary); box-shadow: var(--shadow-sm); }
+        .input-row:focus-within { background: #fff; border-color: var(--text-muted); box-shadow: var(--shadow-sm); }
         .input-row label { font-size: 0.95em; font-weight: 600; color: var(--text-muted); width: 80px; cursor: default; }
         .input-row input { flex: 1; max-width: 150px; padding: 8px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.1em; font-weight: 600; background: #fff; color: var(--text-main); cursor: text; transition: var(--transition); }
-        .input-row input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-faint); }
+        .input-row input:focus { outline: none; border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); }
 
         /* Step 3 Grid Redesign */
         .line-by-line-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .line-item { display: flex; flex-direction: column; align-items: stretch; background: var(--bg-surface); padding: 16px 20px; border-radius: var(--radius-md); border: 1px solid var(--border); transition: var(--transition); box-shadow: var(--shadow-sm); }
-        .line-item:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-faint); transform: translateY(-1px); }
+        .line-item:focus-within { border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); transform: translateY(-1px); }
         .line-item .label-info { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
-        .line-item .label-info span { background: var(--primary-faint); color: var(--primary-hover); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 700; border: 1px solid rgba(61, 205, 88, 0.2); letter-spacing: 0.5px; }
+        .line-item .label-info span { background: var(--neutral-faint); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 700; border: 1px solid var(--border); letter-spacing: 0.5px; }
         
         .line-input-group { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .line-target-text { font-size: 0.85em; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
         .line-target-text span.val { color: var(--text-main); font-weight: 700; font-size: 1.3em; display: block; margin-top: 2px; }
         
-        .line-item input { flex: 1; max-width: 140px; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.25em; font-weight: 700; color: var(--primary-hover); background: #f8fafc; cursor: text; transition: var(--transition); }
-        .line-item input:focus { outline: none; border-color: var(--primary); background: #fff; }
+        .line-item input { flex: 1; max-width: 140px; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.25em; font-weight: 700; color: var(--text-main); background: #f8fafc; cursor: text; transition: var(--transition); }
+        .line-item input:focus { outline: none; border-color: var(--text-muted); background: #fff; }
 
         .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #fff; border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px; text-align: center; box-shadow: var(--shadow-sm); }
         .stats-item .title { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
         .stats-item .val { font-size: 1.25em; font-weight: 600; color: var(--text-main); margin-top: 4px; }
 
         .pairing-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
-        .pairing-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 24px 20px; box-shadow: var(--shadow-sm); border-top: 6px solid var(--primary); text-align: center; transition: all 0.2s ease; }
-        .pairing-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); border-color: var(--primary-hover); }
+        .pairing-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 24px 20px; box-shadow: var(--shadow-sm); border-top: 6px solid var(--text-muted); text-align: center; transition: all 0.2s ease; }
+        .pairing-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); border-color: var(--text-muted); }
         .pairing-card .station-num { font-size: 0.95em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 1px; }
         .pairing-card .match-main { font-size: 1.5em; font-weight: 800; color: var(--text-main); margin-bottom: 6px; line-height: 1.2; }
 
@@ -214,7 +219,7 @@
         .swap-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); }
         .swap-node { text-align: center; }
         .swap-badge { background: var(--bg-body); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.95em; display: block; margin-bottom: 4px; }
-        .swap-arrow { font-size: 1.4em; color: var(--primary); }
+        .swap-arrow { font-size: 1.4em; color: var(--text-muted); }
         .swap-meta { text-align: right; border-left: 1px solid var(--border); padding-left: 16px; }
         .swap-meta .lbl { font-size: 0.75em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; display: block; letter-spacing: 0.5px; }
         .swap-meta .gap { font-size: 1.15em; font-weight: 700; color: var(--text-main); }
@@ -224,7 +229,7 @@
         .data-table th { background: var(--bg-sidebar); color: #fff; font-weight: 600; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; position: sticky; top: 0; }
         .data-table tbody tr { background: #fff; transition: var(--transition); }
         .data-table tbody tr.clickable-row { cursor: pointer; }
-        .data-table tbody tr.clickable-row:hover { background-color: var(--primary-faint); }
+        .data-table tbody tr.clickable-row:hover { background-color: var(--neutral-faint); }
         .data-table tbody td { font-weight: 500; color: var(--text-main); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.2s ease; }
@@ -232,6 +237,11 @@
         .modal-content { background: var(--bg-surface); width: 95%; max-width: 1200px; max-height: 90vh; overflow-y: auto; padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); position: relative; }
         
         .hidden { display: none !important; }
+        
+        /* Alert Banners */
+        .alert-banner { padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; font-size: 1.05em; font-weight: 600; display: flex; flex-direction: column; gap: 8px; border: 2px solid transparent; }
+        .alert-error { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+        .alert-warning { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
     </style>
 </head>
 <body>
@@ -296,7 +306,7 @@
                     <div class="meta-field"><label>Part #</label><input type="text" id="partNum" placeholder="e.g. 3-04"></div>
                     <div class="meta-field"><label>Single Part Tol (&plusmn;)</label><input type="number" step="any" id="partTol" placeholder="0.00200"></div>
                     <div class="meta-field"><label>Assembly Tol (&plusmn;)</label><input type="number" step="any" id="assemblyTol" placeholder="0.00400" title="Used for Stack Cpk Limits"></div>
-                    <div class="meta-field"><label>Range Spec (Max Spread)</label><input type="number" step="any" id="rangeSpec" placeholder="0.00150"></div>
+                    <div class="meta-field"><label>Range Spec (Max Spread)</label><input type="number" step="any" id="rangeSpec" placeholder="0.00100" value="0.00100"></div>
                 </div>
 
                 <div class="set-config-banner">
@@ -321,7 +331,7 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 24px; margin-bottom: 32px;">
+                <div style="display: flex; gap: 24px; margin-bottom: 40px;">
                     <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="holderVarianceCanvas"></canvas></div>
                     <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="punchVarianceCanvas"></canvas></div>
                 </div>
@@ -334,10 +344,12 @@
                     <div class="card-title">Step 2: Pre-Assembly Instructions (Match &amp; Build)</div>
                 </div>
                 
+                <div id="optimizationAlerts" style="margin-bottom: 24px;"></div>
+
                 <div class="stats-banner">
                     <div class="stats-item">
                         <div class="title">Worst-Case Spread</div>
-                        <div id="worstRange" class="val" style="color: var(--danger);">-</div>
+                        <div id="worstRange" class="val" style="color: var(--text-main);">-</div>
                     </div>
                     <div class="stats-item">
                         <div class="title">Unoptimized Baseline</div>
@@ -345,7 +357,7 @@
                     </div>
                     <div class="stats-item">
                         <div class="title">Optimized Spread</div>
-                        <div id="optRange" class="val" style="color: var(--primary);">-</div>
+                        <div id="optRange" class="val" style="color: var(--text-main);">-</div>
                     </div>
                     <div class="stats-item">
                         <div class="title">Variance Reduction</div>
@@ -408,10 +420,10 @@
                 <div id="swapGrid" class="swap-grid" style="margin-bottom: 32px;"></div>
 
                 <div style="display: flex; gap: 20px; margin-bottom: 24px;">
-                    <button class="btn btn-accent" style="flex: 1; padding: 16px; font-size: 1.05em;" onclick="sendEmailToFlow()">
+                    <button class="btn btn-accent" style="flex: 1; padding: 20px; font-size: 1.1em;" onclick="sendEmailToFlow()">
                         &#9993; Send to SharePoint (via Email)
                     </button>
-                    <button class="btn btn-outline" style="flex: 1; padding: 16px; font-size: 1.05em;" onclick="exportToAdvancedExcel()">
+                    <button class="btn btn-outline" style="flex: 1; padding: 20px; font-size: 1.1em;" onclick="exportToAdvancedExcel()">
                         &#128190; Export Multi-Sheet Excel
                     </button>
                 </div>
@@ -459,7 +471,7 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 24px; margin-bottom: 32px;">
+                <div style="display: flex; gap: 24px; margin-bottom: 40px;">
                     <div class="mini-chart-wrapper" style="flex: 1; height: 260px;"><canvas id="dieVarianceCanvas"></canvas></div>
                 </div>
 
@@ -470,6 +482,8 @@
                 <div class="card-header">
                     <div class="card-title">Die Validation Results</div>
                 </div>
+                
+                <div id="dieOptimizationAlerts" style="margin-bottom: 24px;"></div>
 
                 <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="kpi-tile" id="dieStatusTile">
@@ -486,7 +500,7 @@
                     </div>
                 </div>
 
-                <div id="dieAlertBox" style="padding: 24px; border-radius: var(--radius-md); font-size: 1.15em; font-weight: 700; text-align: center;">
+                <div id="dieAlertBox" style="padding: 24px; border-radius: var(--radius-md); font-size: 1.15em; font-weight: 700; text-align: center; display: none;">
                 </div>
             </div>
         </section>
@@ -543,7 +557,7 @@
                 </div>
                 <p style="margin-bottom: 24px; color: var(--text-muted); font-weight: 500; font-size: 1.05em; line-height: 1.5;">
                     Clicking Export will generate a complete Excel workbook. Every individual historical run is saved to its own dedicated, cleanly formatted worksheet containing all recorded measurements and statistics.
-                    <br><span style="color: var(--primary); font-weight: 700;">Click on any row below to instantly view its full run dashboard.</span>
+                    <br><span style="color: var(--text-main); font-weight: 700;">Click on any row below to instantly view its full run dashboard.</span>
                 </p>
                 <table class="data-table">
                     <thead>
@@ -569,18 +583,18 @@
     <div id="historyModal" class="modal-overlay hidden">
         <div class="modal-content">
             
-            <div class="card-header" style="border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
-                <div class="card-title" style="font-size: 1.6em;">
+            <div class="card-header" style="border-bottom: 2px solid var(--border); padding-bottom: 24px; margin-bottom: 32px;">
+                <div class="card-title" style="font-size: 1.8em;">
                     Historical Run Audit 
                     <span id="modTitle" style="color:var(--text-muted); font-size:0.7em; margin-left:16px; font-weight:500;"></span>
                 </div>
-                <div style="display: flex; gap: 16px; align-items: center;">
-                    <div id="modBigStatus" style="padding: 10px 24px; border-radius: var(--radius-sm); font-weight: 700; font-size: 1.15em; letter-spacing: 1px;"></div>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div id="modBigStatus" style="padding: 12px 32px; border-radius: var(--radius-sm); font-weight: 700; font-size: 1.3em; letter-spacing: 1.5px;"></div>
                     <button class="btn btn-outline" onclick="closeModal()">Close</button>
                 </div>
             </div>
 
-            <div class="kpi-row" style="margin-bottom: 32px; grid-template-columns: repeat(5, 1fr);">
+            <div class="kpi-row" style="margin-bottom: 40px; grid-template-columns: repeat(5, 1fr);">
                 <div class="kpi-tile">
                     <div class="lbl">Measured Range</div>
                     <div class="val" id="modRange" style="color: var(--text-main);">-</div>
@@ -608,19 +622,19 @@
                 <div class="mini-chart-wrapper" style="flex: 1; box-shadow: var(--shadow-sm);"><canvas id="modPunchVarianceCanvas"></canvas></div>
             </div>
 
-            <div class="mini-chart-wrapper" style="margin-bottom: 32px; height: 300px; box-shadow: var(--shadow-sm);">
+            <div class="mini-chart-wrapper" style="margin-bottom: 40px; height: 360px; box-shadow: var(--shadow-sm);">
                 <canvas id="modChartCanvas"></canvas>
             </div>
 
-            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px;">
-                <div class="card-title" style="font-size: 1.25em;">Station-by-Station Pairings & Measurements</div>
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
+                <div class="card-title" style="font-size: 1.35em;">Station-by-Station Pairings & Measurements</div>
             </div>
-            <div style="overflow-x: auto; margin-bottom: 32px;">
+            <div style="overflow-x: auto; margin-bottom: 40px;">
                 <table class="data-table" style="border: 2px solid var(--border);">
                     <thead style="background: var(--bg-sidebar); color: #fff;">
                         <tr>
-                            <th style="padding: 16px;">Station</th>
-                            <th style="padding: 16px;">Optimized Pairing</th>
+                            <th style="padding: 20px;">Station</th>
+                            <th style="padding: 20px;">Optimized Pairing</th>
                             <th>Punch Length</th>
                             <th>Holder Length</th>
                             <th>Target Height</th>
@@ -632,23 +646,23 @@
                 </table>
             </div>
 
-            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px;">
-                <div class="card-title" style="font-size: 1.15em;">Punch Fine-Tuning Swaps Identified</div>
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
+                <div class="card-title" style="font-size: 1.2em;">Punch Fine-Tuning Swaps Identified</div>
             </div>
-            <div id="modSwapGrid" class="swap-grid" style="margin-bottom: 32px;"></div>
+            <div id="modSwapGrid" class="swap-grid" style="margin-bottom: 40px;"></div>
 
-            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 16px; border-top: 1px solid var(--border); padding-top: 24px;">
-                <div class="card-title" style="font-size: 1.15em; color: var(--text-muted);">Run Metadata Reference</div>
+            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 32px;">
+                <div class="card-title" style="font-size: 1.2em; color: var(--text-muted);">Run Metadata Reference</div>
             </div>
             <div class="meta-grid" style="background: transparent; border: none; padding: 0; box-shadow: none;">
-                <div class="meta-field"><label>Operator</label><div id="modOp" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Tool ID</label><div id="modTool" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Batch #</label><div id="modBatch" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Press #</label><div id="modPress" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Part #</label><div id="modPart" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Shift</label><div id="modShift" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Part Tolerance (&plusmn;)</label><div id="modPartTol" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
-                <div class="meta-field"><label>Assembly Tolerance (&plusmn;)</label><div id="modAssmTol" style="font-weight:600; font-size:1.05em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Operator</label><div id="modOp" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Tool ID</label><div id="modTool" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Batch #</label><div id="modBatch" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Press #</label><div id="modPress" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Part #</label><div id="modPart" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Shift</label><div id="modShift" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Part Tolerance (&plusmn;)</label><div id="modPartTol" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
+                <div class="meta-field"><label>Assembly Tolerance (&plusmn;)</label><div id="modAssmTol" style="font-weight:600; font-size:1.1em; color:var(--text-main);"></div></div>
             </div>
             
         </div>
@@ -728,7 +742,6 @@
         showToast("Email template generated. Click Send to log to SharePoint.", "success");
     }
 
-    // --- Dynamically fetch statistical constant d2 based on subgroup size n ---
     function getD2(n) {
         const d2Table = { 2:1.128, 3:1.693, 4:2.059, 5:2.326, 6:2.534, 7:2.704, 8:2.847, 9:2.970, 10:3.078, 11:3.173, 12:3.258, 13:3.336, 14:3.407, 15:3.472, 16:3.532, 17:3.588, 18:3.640, 19:3.689, 20:3.735, 21:3.778, 22:3.819, 23:3.858, 24:3.895, 25:3.931 };
         if (n < 2) return 1.128;
@@ -736,7 +749,6 @@
         return 3.931 + ((n - 25) * 0.03);
     }
 
-    // --- Build DOM Elements ---
     function buildInputGrids() {
         const count = parseInt(document.getElementById('numSets').value) || 12;
         const pCont = document.getElementById('punchInputs');
@@ -777,7 +789,6 @@
         updateDieChart();
     }
 
-    // --- Keyboard Navigation ---
     document.addEventListener('keydown', function(e) {
         if(e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
             if(e.key === '-' || e.key === 'Subtract' || e.key === 'e' || e.key === 'E' || e.key === '+') { e.preventDefault(); return; }
@@ -807,7 +818,7 @@
         document.getElementById('partNum').value = "3-04";
         document.getElementById('partTol').value = "0.00200";
         document.getElementById('assemblyTol').value = "0.00400";
-        document.getElementById('rangeSpec').value = "0.00150";
+        document.getElementById('rangeSpec').value = "0.00100"; 
 
         for (let i=1; i<=count; i++) {
             document.getElementById(`p${i}`).value = (0.88400 + (Math.random() * 0.00080)).toFixed(5);
@@ -849,7 +860,7 @@
         document.getElementById('partNum').value = '';
         document.getElementById('partTol').value = '';
         document.getElementById('assemblyTol').value = '';
-        document.getElementById('rangeSpec').value = '';
+        document.getElementById('rangeSpec').value = '0.00100';
 
         for (let i=1; i<=count; i++) {
             let p = document.getElementById(`p${i}`); if (p) p.value = '';
@@ -859,6 +870,7 @@
         document.getElementById('stage1ResultsCard').classList.add('hidden');
         document.getElementById('stage2VerificationCard').classList.add('hidden');
         document.getElementById('resultsDashboard').classList.add('hidden');
+        document.getElementById('optimizationAlerts').innerHTML = '';
         activeStage1Pairs = [];
         latestRunRecord = null;
         updateLiveCharts();
@@ -871,6 +883,7 @@
             let d = document.getElementById(`d${i}`); if (d) d.value = '';
         }
         document.getElementById('dieResultsCard').classList.add('hidden');
+        document.getElementById('dieOptimizationAlerts').innerHTML = '';
         updateDieChart();
         showToast("Die inputs cleared.");
     }
@@ -910,7 +923,7 @@
             let dv = parseFloat(dEl ? dEl.value : null);
             dData.push(isNaN(dv) ? null : dv);
         }
-        drawMiniChart('dieVarianceCanvas', dData, 'Die Thickness Variance (Raw)', 'var(--primary)', 'Die');
+        drawMiniChart('dieVarianceCanvas', dData, 'Die Thickness Variance (Raw)', 'var(--text-muted)', 'Die');
     }
 
     function drawMiniChart(canvasId, data, title, colorHex, xLabelPrefix) {
@@ -1016,7 +1029,7 @@
 
         ctx.font = '500 12px sans-serif';
         ctx.fillStyle = '#94a3b8'; ctx.fillRect(w - padRight - 150, 12, 12, 12); ctx.fillText('Target (Calculated)', w - padRight - 130, 22);
-        ctx.fillStyle = 'var(--primary-hover)'; ctx.fillRect(w - padRight - 250, 12, 12, 12); ctx.fillText('Actual (Measured)', w - padRight - 230, 22);
+        ctx.fillStyle = 'var(--text-muted)'; ctx.fillRect(w - padRight - 250, 12, 12, 12); ctx.fillText('Actual (Measured)', w - padRight - 230, 22);
 
         ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(padX, padY); ctx.lineTo(w-padRight, padY); ctx.stroke();
@@ -1033,7 +1046,7 @@
             ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.arc(getX(i), getY(v), 4, 0, Math.PI*2); ctx.fill();
         });
 
-        ctx.strokeStyle = 'var(--primary-hover)'; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.strokeStyle = 'var(--text-muted)'; ctx.lineWidth = 3; ctx.beginPath();
         let first = true;
         for(let i=0; i<actuals.length; i++) {
             if(actuals[i] !== null && !isNaN(actuals[i])) {
@@ -1048,7 +1061,7 @@
             if(actuals[i] !== null && !isNaN(actuals[i])) {
                 let dy = getY(actuals[i]);
                 let dev = Math.abs(actuals[i] - targets[i]);
-                ctx.fillStyle = dev > 0.0005 ? '#ef4444' : 'var(--primary-hover)'; 
+                ctx.fillStyle = dev > 0.0005 ? '#ef4444' : 'var(--text-muted)'; 
                 ctx.beginPath(); ctx.arc(getX(i), dy, 5, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(getX(i), dy, 2.5, 0, Math.PI*2); ctx.fill();
             }
@@ -1058,12 +1071,14 @@
         }
     }
 
-    // --- STEP 1: CALCULATE OPTIMAL PAIRINGS ---
+    // --- STEP 1: CALCULATE OPTIMAL PAIRINGS & OUTLIERS ---
     function calculateStage1Pairings() {
         updateDateTime();
         const count = parseInt(document.getElementById('numSets').value) || 12;
+        const rangeSpec = parseFloat(document.getElementById('rangeSpec').value) || 0.00100;
+        
         let punches = [], holders = [];
-        let unoptTotals = [];
+        let pVals = [], hVals = [];
 
         for (let i=1; i<=count; i++) {
             let p = parseFloat(document.getElementById(`p${i}`).value);
@@ -1071,11 +1086,34 @@
             if (isNaN(p) || isNaN(h)) return showToast("Missing measurements in row " + i, "error");
             punches.push({id: i, v: p});
             holders.push({id: i, v: h});
-            unoptTotals.push(p + h);
+            pVals.push(p);
+            hVals.push(h);
         }
 
-        let unoptMin = Math.min(...unoptTotals);
-        let unoptMax = Math.max(...unoptTotals);
+        // Detect Outliers using Median Absolute Deviation (MAD)
+        const getMedian = (arr) => {
+            const s = [...arr].sort((a,b) => a-b);
+            const mid = Math.floor(s.length / 2);
+            return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+        };
+
+        let pMedian = getMedian(pVals);
+        let hMedian = getMedian(hVals);
+
+        let pMAD = getMedian(pVals.map(v => Math.abs(v - pMedian)));
+        let hMAD = getMedian(hVals.map(v => Math.abs(v - hMedian)));
+
+        let pThresh = Math.max(pMAD * 5, 0.003);
+        let hThresh = Math.max(hMAD * 5, 0.003);
+
+        let punchOutliers = [];
+        let holderOutliers = [];
+
+        punches.forEach(p => { if (Math.abs(p.v - pMedian) > pThresh) punchOutliers.push(p.id); });
+        holders.forEach(h => { if (Math.abs(h.v - hMedian) > hThresh) holderOutliers.push(h.id); });
+
+        let unoptMin = Math.min(...pVals) + Math.min(...hVals);
+        let unoptMax = Math.max(...pVals) + Math.max(...hVals);
         let unoptRange = unoptMax - unoptMin;
 
         let pAsc = [...punches].sort((a,b) => a.v - b.v);
@@ -1103,9 +1141,60 @@
         let diffRange = unoptRange - optRange;
         let pctRed = unoptRange > 0 ? ((diffRange / unoptRange) * 100).toFixed(1) : 0;
 
+        // Alerts Area Handling
+        let alertsHtml = '';
+        let hasOutliers = punchOutliers.length > 0 || holderOutliers.length > 0;
+
+        if (hasOutliers) {
+            let badgeHtml = '';
+            
+            if (punchOutliers.length > 0) {
+                let pLabel = punchOutliers.length === 1 ? "Punch" : "Punches";
+                badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${pLabel}:</span> ` + 
+                    punchOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
+                    `</div>`;
+            }
+            
+            if (holderOutliers.length > 0) {
+                let hLabel = holderOutliers.length === 1 ? "Holder" : "Holders";
+                badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${hLabel}:</span> ` + 
+                    holderOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
+                    `</div>`;
+            }
+
+            alertsHtml += `
+                <div class="alert-banner alert-warning" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm); background: linear-gradient(to right, #fffbeb, #fef3c7);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px; color: #b45309;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">Extreme Outlier Detected</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; color: #92400e; margin-bottom: 20px; line-height: 1.6;">
+                        The following components deviate significantly from the rest of the batch. Please thoroughly verify they were not accidentally mixed in from another tool set before proceeding with assembly.
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:16px; background: rgba(255,255,255,0.6); padding: 20px; border-radius: 12px; border: 1px dashed #fcd34d;">
+                        ${badgeHtml}
+                    </div>
+                </div>`;
+        }
+        
+        if (optRange > rangeSpec) {
+            alertsHtml += `
+                <div class="alert-banner alert-error" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">CRITICAL: Set Exceeds Specifications</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; line-height: 1.6;">
+                        The optimized spread (<strong style="font-size:1.15em;">${optRange.toFixed(5)}"</strong>) exceeds your target limit of <strong style="font-size:1.15em;">${rangeSpec.toFixed(5)}"</strong>.<br>No combination of these components will pass validation. Pull the outliers or send the set for maintenance.
+                    </div>
+                </div>`;
+        }
+        document.getElementById('optimizationAlerts').innerHTML = alertsHtml;
+
         document.getElementById('worstRange').innerText = worstRange.toFixed(5);
         document.getElementById('unoptRange').innerText = unoptRange.toFixed(5);
         document.getElementById('optRange').innerText = optRange.toFixed(5);
+        document.getElementById('optRange').style.color = optRange > rangeSpec ? 'var(--danger)' : 'var(--text-main)';
         document.getElementById('reductionVal').innerText = `-${diffRange.toFixed(5)} (${pctRed}%)`;
 
         document.getElementById('stage1ResultsCard').classList.remove('hidden');
@@ -1120,8 +1209,11 @@
             let targetLbl = document.getElementById(`lblTarget${pair.hId}`);
             if(targetLbl) targetLbl.innerHTML = `Target:<br><span class="val">${pair.expTotal.toFixed(5)}"</span>`;
 
+            let isOutlier = punchOutliers.includes(pair.pId) || holderOutliers.includes(pair.hId);
+            let borderOverride = isOutlier ? 'border-top-color: var(--danger); background-color: var(--danger-bg);' : '';
+
             grid.innerHTML += `
-                <div class="pairing-card">
+                <div class="pairing-card" style="${borderOverride}">
                     <div class="station-num">Set ${pair.hId}</div>
                     <div class="match-main">Holder ${pair.hId} <br>+ Punch ${pair.pId}</div>
                 </div>`;
@@ -1180,7 +1272,7 @@
         for(let k=0; k<numSwapsToDisplay; k++) {
             let hi = sorted[k], lo = sorted[(count - 1) - k];
             let gap = hi.val - lo.val;
-            if (gap > 0.00001) {
+            if (gap > 0.00001 && !isPass) { // Only show swaps if it actually failed
                 swapsFound = true;
                 swapGrid.innerHTML += `
                     <div class="swap-card">
@@ -1191,7 +1283,7 @@
                     </div>`;
             }
         }
-        if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--primary); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
+        if(!swapsFound || isPass) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--success); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; VALIDATED IN SPEC. NO SWAPS REQUIRED.</div>`;
 
         latestRunRecord = {
             date: document.getElementById('date').value,
@@ -1238,6 +1330,23 @@
         }
         
         let numericVals = vals.map(v => v.val);
+        
+        // Detect Outliers using Median Absolute Deviation (MAD)
+        const getMedian = (arr) => {
+            const s = [...arr].sort((a,b) => a-b);
+            const mid = Math.floor(s.length / 2);
+            return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+        };
+
+        let dMedian = getMedian(numericVals);
+        let dMAD = getMedian(numericVals.map(v => Math.abs(v - dMedian)));
+
+        // Dynamic threshold: 5x MAD, with a hard floor of 0.003"
+        let dThresh = Math.max(dMAD * 5, 0.003);
+
+        let dieOutliers = [];
+        vals.forEach(d => { if (Math.abs(d.val - dMedian) > dThresh) dieOutliers.push(d.id); });
+        
         let max = Math.max(...numericVals);
         let min = Math.min(...numericVals);
         let range = max - min;
@@ -1245,6 +1354,44 @@
         
         let isPass = range <= spec;
         
+        // Alerts Area Handling
+        let alertsHtml = '';
+        if (dieOutliers.length > 0) {
+            let dLabel = dieOutliers.length === 1 ? "Die" : "Dies";
+            let badgeHtml = `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:50px; text-transform:uppercase;">${dLabel}:</span> ` + 
+                dieOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
+                `</div>`;
+
+            alertsHtml += `
+                <div class="alert-banner alert-warning" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm); background: linear-gradient(to right, #fffbeb, #fef3c7);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px; color: #b45309;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">Extreme Outlier Detected</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; color: #92400e; margin-bottom: 20px; line-height: 1.6;">
+                        The following dies deviate significantly from the rest of the batch. Please thoroughly verify them before proceeding.
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:16px; background: rgba(255,255,255,0.6); padding: 20px; border-radius: 12px; border: 1px dashed #fcd34d;">
+                        ${badgeHtml}
+                    </div>
+                </div>`;
+        }
+        
+        if (!isPass) {
+            alertsHtml += `
+                <div class="alert-banner alert-error" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">CRITICAL: Set Exceeds Specifications</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; line-height: 1.6;">
+                        The measured spread (<strong style="font-size:1.15em;">${range.toFixed(5)}"</strong>) exceeds your target limit of <strong style="font-size:1.15em;">${spec.toFixed(5)}"</strong>.<br>This die set cannot be used for production. Please send the out-of-spec dies for maintenance or grinding.
+                    </div>
+                </div>`;
+        }
+
+        document.getElementById('dieOptimizationAlerts').innerHTML = alertsHtml;
+
         document.getElementById('dieValRange').innerText = range.toFixed(5);
         document.getElementById('dieValMean').innerText = mean.toFixed(5);
         document.getElementById('dieValStatus').innerText = isPass ? 'PASS' : 'FAIL';
@@ -1252,22 +1399,13 @@
         
         let alertBox = document.getElementById('dieAlertBox');
         if (isPass) {
+            alertBox.style.display = 'block';
             alertBox.style.backgroundColor = 'var(--success-bg)';
             alertBox.style.color = 'var(--success)';
             alertBox.style.border = '2px solid var(--success-border)';
             alertBox.innerHTML = `&#10004; DIE SET PASSED: Spread is ${range.toFixed(5)}" (Limit: ${spec.toFixed(5)}")`;
         } else {
-            let outlier = vals[0];
-            let maxDev = -1;
-            vals.forEach(d => {
-                let dev = Math.abs(d.val - mean);
-                if (dev > maxDev) { maxDev = dev; outlier = d; }
-            });
-            
-            alertBox.style.backgroundColor = 'var(--danger-bg)';
-            alertBox.style.color = 'var(--danger)';
-            alertBox.style.border = '2px solid var(--danger-border)';
-            alertBox.innerHTML = `&#9888; DIE SET FAILED: Spread is ${range.toFixed(5)}" (Limit: ${spec.toFixed(5)}").<br><span style="font-size: 0.9em; font-weight: 500; color: var(--text-main); display: block; margin-top: 10px;">Outlier detected: <strong>Die ${outlier.id}</strong> deviates the most from the average. Replace it and re-measure.</span>`;
+            alertBox.style.display = 'none';
         }
         
         document.getElementById('dieResultsCard').classList.remove('hidden');
@@ -1312,12 +1450,12 @@
                 let isBad = Math.abs(diff) > 0.0005;
                 let diffStyle = isBad 
                     ? 'background: var(--danger-faint); color: var(--danger); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--danger-border);' 
-                    : 'background: var(--success-faint); color: var(--success); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--success-border);';
+                    : 'background: var(--bg-body); color: var(--text-main); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);';
 
                 tableBody.innerHTML += `
                     <tr>
                         <td style="font-weight: 700; font-size: 1.15em; color: var(--text-main);">Set ${c.setId}</td>
-                        <td><span style="background: var(--bg-body); padding: 8px 20px; border-radius: 8px; font-weight: 600; font-size: 1.05em; border: 2px solid var(--border); color: var(--primary-hover);">Holder ${c.setId} + Punch ${c.punchId}</span></td>
+                        <td><span style="background: var(--bg-body); padding: 8px 20px; border-radius: 8px; font-weight: 600; font-size: 1.05em; border: 2px solid var(--border); color: var(--text-main);">Holder ${c.setId} + Punch ${c.punchId}</span></td>
                         <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${parseFloat(c.pVal).toFixed(5)}"</td>
                         <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${parseFloat(c.hVal).toFixed(5)}"</td>
                         <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${target.toFixed(5)}"</td>
@@ -1384,7 +1522,7 @@
                         </div>`;
                 }
             }
-            if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--primary); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
+            if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--text-main); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
         } else {
             swapGrid.innerHTML = `<div style="text-align:center; padding: 32px; color: var(--text-muted); font-weight: 500;">No component data available for this older run.</div>`;
         }
@@ -1499,13 +1637,13 @@
         ctx.strokeStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(padX, yUCL); ctx.lineTo(w-padX, yUCL); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(padX, yLCL); ctx.lineTo(w-padX, yLCL); ctx.stroke();
         
-        ctx.strokeStyle = 'var(--primary-hover)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(padX, getY(grandMean)); ctx.lineTo(w-padX, getY(grandMean)); ctx.stroke();
+        ctx.strokeStyle = 'var(--text-main)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(padX, getY(grandMean)); ctx.lineTo(w-padX, getY(grandMean)); ctx.stroke();
         ctx.setLineDash([]);
 
         ctx.fillStyle = '#ef4444'; ctx.textAlign = 'left';
         ctx.fillText(`UCL: ${UCL.toFixed(4)}`, w - padX + 12, yUCL+4);
         ctx.fillText(`LCL: ${LCL.toFixed(4)}`, w - padX + 12, yLCL+4);
-        ctx.fillStyle = 'var(--primary-hover)';
+        ctx.fillStyle = 'var(--text-main)';
         ctx.fillText(`AVG: ${grandMean.toFixed(4)}`, w - padX + 12, getY(grandMean)+4);
 
         ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2.5; ctx.beginPath();
