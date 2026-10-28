@@ -3,17 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punch Optimizer</title>
+    <title>Punch Optimizer Pro - Advanced SPC & Validation</title>
 
+    <!-- External Libraries -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        /* ==========================================================================
+           1. CSS VARIABLES & THEMING SYSTEM
+           ========================================================================== */
         :root {
-            /* Consistent Schneider Electric Palette */
+            /* Schneider Electric Core Palette & Extended Colors */
             --primary: #3DCD58;
             --primary-hover: #00A759;
+            --primary-dark: #008f4c;
             --primary-faint: rgba(61, 205, 88, 0.12);
+            --primary-transparent: rgba(61, 205, 88, 0.25);
             
             --bg-body: #f8fafc;
             --bg-surface: #ffffff;
@@ -22,8 +28,12 @@
             
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --text-inverse: #ffffff;
+            
             --border: #e2e8f0;
+            --border-hover: #cbd5e1;
             --neutral-faint: #f1f5f9;
+            --neutral-medium: #cbd5e1;
             
             --danger: #ef4444;
             --danger-bg: #fef2f2;
@@ -37,16 +47,35 @@
             --success-bg: #ecfdf5;
             --success-border: #6ee7b7;
             
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            --info-border: #93c5fd;
+
+            --spc-ucl: #ef4444;
+            --spc-lcl: #ef4444;
+            --spc-center: #0f172a;
+            --spc-sigma1: #f59e0b;
+            --spc-sigma2: #f97316;
+            
+            --radius-xs: 4px;
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 20px;
+            --radius-xl: 32px;
             
+            --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
             --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.05);
+            --shadow-lg: 0 15px 35px -5px rgba(0,0,0,0.08);
             --shadow-float: 0 20px 30px -10px rgba(0,0,0,0.1);
-            --transition: all 0.25s ease-out;
+            
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-fast: all 0.15s ease-out;
         }
 
+        /* ==========================================================================
+           2. GLOBAL RESET & BASE STYLES
+           ========================================================================== */
         * { 
             box-sizing: border-box; 
             margin: 0; 
@@ -78,41 +107,236 @@
             font-variant-numeric: tabular-nums;
         }
 
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
-        input[type=text], input[type=number], select {
-            letter-spacing: 0.5px;
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
         }
+        
+        input[type=number] { -moz-appearance: textfield; }
+        input[type=text], input[type=number], select { letter-spacing: 0.5px; }
 
-        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
+        /* ==========================================================================
+           3. UI COMPONENTS (Toggles, Buttons, Inputs, Toasts)
+           ========================================================================== */
+        
+        /* iOS-style Toggle Switch */
+        .toggle-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            width: 85px;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            background-color: var(--border);
+            border-radius: 20px;
+            transition: var(--transition);
+            flex-shrink: 0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .toggle-slider::before {
+            content: "";
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .toggle-switch input:checked + .toggle-slider { background-color: var(--primary); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+        .toggle-switch input:checked ~ .label-text { color: var(--text-main); }
+
+        /* Toast Notifications */
+        #toast-container { 
+            position: fixed; 
+            bottom: 24px; 
+            right: 24px; 
+            z-index: 9999; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
         .toast {
-            background: var(--bg-sidebar); color: #fff; padding: 16px 24px; border-radius: var(--radius-sm);
-            box-shadow: var(--shadow-float); font-weight: 500; display: flex; align-items: center; gap: 10px; font-size: 1.05em;
-            transform: translateY(100px); opacity: 0; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            background: var(--bg-sidebar); 
+            color: #fff; 
+            padding: 16px 24px; 
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-float); 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-size: 1.05em;
+            transform: translateY(100px); 
+            opacity: 0; 
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .toast.success { border-left: 4px solid var(--success); }
         .toast.error { border-left: 4px solid var(--danger); }
+        .toast.warning { border-left: 4px solid var(--warning); }
+        .toast.info { border-left: 4px solid var(--info); }
         @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
-        @keyframes slideOut { to { transform: translateX(100px); opacity: 0; } }
+        @keyframes slideOut { to { transform: translateX(120%); opacity: 0; } }
 
-        .topbar { width: 100%; background-color: var(--bg-sidebar); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 20; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .brand { font-size: 1.1em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
+        /* Buttons */
+        .btn { 
+            padding: 12px 20px; 
+            border-radius: var(--radius-sm); 
+            font-size: 0.95em; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: var(--transition); 
+            border: none; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px; 
+            letter-spacing: 0.5px; 
+            outline: none;
+        }
+        .btn:focus-visible { box-shadow: 0 0 0 3px var(--primary-transparent); }
+        .btn:active { transform: scale(0.98); }
+        
+        .btn-primary { background: var(--text-main); color: #fff; width: 100%; padding: 16px; font-size: 1.05em; box-shadow: var(--shadow-sm); }
+        .btn-primary:hover { background: #334155; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        
+        .btn-accent { background: var(--primary-dark); color: #fff; box-shadow: 0 4px 12px var(--primary-faint); }
+        .btn-accent:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px var(--primary-faint); }
+        
+        .btn-outline { background: #fff; border: 2px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-body); border-color: var(--text-muted); }
+
+        /* ==========================================================================
+           4. LAYOUT, NAVIGATION & WORKSPACE
+           ========================================================================== */
+        
+        .topbar { 
+            width: 100%; 
+            background-color: var(--bg-sidebar); 
+            color: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 0 24px; 
+            z-index: 20; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+        .brand { 
+            font-size: 1.15em; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            color: #fff; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-icon { color: var(--primary); }
+        
         .nav-menu { display: flex; gap: 4px; align-items: center; }
-        .nav-item { padding: 20px 20px; cursor: pointer; color: #94a3b8; font-weight: 500; font-size: 0.95em; transition: var(--transition); display: flex; align-items: center; gap: 8px; border-bottom: 4px solid transparent; letter-spacing: 0.5px; }
+        .nav-item { 
+            padding: 20px 20px; 
+            cursor: pointer; 
+            color: #94a3b8; 
+            font-weight: 500; 
+            font-size: 0.95em; 
+            transition: var(--transition); 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            border-bottom: 4px solid transparent; 
+            letter-spacing: 0.5px; 
+        }
         .nav-item svg { width: 20px; height: 20px; }
         .nav-item:hover { background-color: var(--bg-sidebar-hover); color: #fff; }
         .nav-item.active { color: var(--primary); font-weight: 600; border-bottom: 4px solid var(--primary); background-color: var(--bg-sidebar-hover); }
 
-        .workspace { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 24px 32px; scroll-behavior: smooth; position: relative; }
-        .view-section { display: none; animation: fadeIn 0.25s ease; }
+        .workspace { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            padding: 24px 32px; 
+            scroll-behavior: smooth; 
+            position: relative; 
+        }
+        .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-sm); margin-bottom: 24px; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .card-title { font-size: 1.25em; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 12px; letter-spacing: 0.5px; }
+        /* ==========================================================================
+           5. CARDS, FORMS & GRIDS
+           ========================================================================== */
+        
+        .card { 
+            background: var(--bg-surface); 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius-lg); 
+            padding: 32px; 
+            box-shadow: var(--shadow-sm); 
+            margin-bottom: 24px; 
+            transition: var(--transition);
+        }
+        .card:hover { box-shadow: var(--shadow-md); }
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 24px; 
+            padding-bottom: 16px; 
+            border-bottom: 1px solid var(--border); 
+        }
+        .card-title { 
+            font-size: 1.25em; 
+            font-weight: 700; 
+            color: var(--text-main); 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            letter-spacing: 0.5px; 
+        }
 
+        /* Mode Selector */
+        .mode-selector {
+            display: flex;
+            background: var(--neutral-faint);
+            border-radius: var(--radius-lg);
+            padding: 6px;
+            margin-bottom: 32px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text-muted);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .mode-btn:hover { color: var(--text-main); background: rgba(0,0,0,0.03); }
+        .mode-btn.active { background: #fff; color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        
+        .workflow-module { display: none; animation: fadeIn 0.25s ease; }
+        .workflow-module.active { display: block; }
+
+        /* Configuration Banners */
         .set-config-banner {
             background: var(--bg-body);
             border: 2px solid var(--border);
@@ -141,79 +365,160 @@
         }
         .set-config-input-wrap input:focus { outline: none; border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); }
 
-        .btn { padding: 12px 20px; border-radius: var(--radius-sm); font-size: 0.95em; font-weight: 600; cursor: pointer; transition: var(--transition); border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.5px; }
-        .btn-primary { background: var(--text-main); color: #fff; width: 100%; padding: 16px; font-size: 1.05em; box-shadow: var(--shadow-sm); }
-        .btn-primary:hover { background: #334155; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-        .btn-accent { background: var(--primary-dark); color: #fff; box-shadow: 0 4px 12px var(--primary-faint); }
-        .btn-accent:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px var(--primary-faint); }
-        .btn-outline { background: #fff; border: 2px solid var(--border); color: var(--text-main); }
-        .btn-outline:hover { background: var(--bg-body); border-color: var(--text-muted); }
-
-        .global-stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-        .global-stat { background: var(--bg-surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm); }
-        .global-stat .lbl { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; }
-        .global-stat .val { font-size: 1.8em; font-weight: 700; color: var(--text-main); }
-        
-        .chart-wrapper { width: 100%; height: 450px; position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow: hidden; }
-        .mini-chart-wrapper { width: 100%; height: 260px; position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
-        canvas { width: 100%; height: 100%; cursor: crosshair; }
-
-        #spc-tooltip {
-            position: absolute; pointer-events: none; background: rgba(255,255,255,0.98); backdrop-filter: blur(8px);
-            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; box-shadow: var(--shadow-float);
-            opacity: 0; transition: opacity 0.15s ease; z-index: 100; min-width: 240px; font-size: 0.9em;
+        /* Metadata Grid */
+        .meta-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            margin-bottom: 24px; 
+            background: #fff; 
+            padding: 24px; 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--border); 
         }
-        #spc-tooltip .tt-head { font-weight: 700; font-size: 1.05em; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
-        #spc-tooltip .tt-row { display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
-        #spc-tooltip .tt-row span.val { color: var(--text-main); font-weight: 600; font-size: 1.05em; }
-
-        .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; background: #fff; padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border); }
         .meta-field { display: flex; flex-direction: column; gap: 6px; }
         .meta-field label { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
-        .meta-field input, .meta-field select { border: 2px solid var(--border); background: var(--bg-body); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 1.05em; font-weight: 500; color: var(--text-main); transition: var(--transition); cursor: text; }
-        .meta-field input:focus, .meta-field select:focus { border-color: var(--text-muted); outline: none; background: #fff; box-shadow: 0 0 0 3px var(--neutral-faint); }
+        .meta-field input, .meta-field select { 
+            border: 2px solid var(--border); 
+            background: var(--bg-body); 
+            border-radius: var(--radius-sm); 
+            padding: 10px 14px; 
+            font-size: 1.05em; 
+            font-weight: 500; 
+            color: var(--text-main); 
+            transition: var(--transition); 
+            cursor: text; 
+        }
+        .meta-field input:focus, .meta-field select:focus { 
+            border-color: var(--text-muted); 
+            outline: none; 
+            background: #fff; 
+            box-shadow: 0 0 0 3px var(--neutral-faint); 
+        }
 
-        .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 24px; }
-        .entry-col-title { font-size: 0.95em; font-weight: 700; text-transform: uppercase; color: var(--text-main); margin-bottom: 16px; letter-spacing: 1px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        /* Entry Grids (Punch/Holder & Natoli) */
+        .entry-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 32px; 
+            margin-bottom: 24px; 
+        }
+        .entry-col-title { 
+            font-size: 0.95em; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            color: var(--text-main); 
+            margin-bottom: 16px; 
+            letter-spacing: 1px; 
+            border-bottom: 2px solid var(--border); 
+            padding-bottom: 8px; 
+        }
         
-        .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg-body); border: 2px solid transparent; transition: var(--transition); }
+        .input-row { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 8px; 
+            padding: 6px 12px; 
+            border-radius: var(--radius-sm); 
+            background: var(--bg-body); 
+            border: 2px solid transparent; 
+            transition: var(--transition); 
+        }
         .input-row:focus-within { background: #fff; border-color: var(--text-muted); box-shadow: var(--shadow-sm); }
-        .input-row label { font-size: 0.95em; font-weight: 600; color: var(--text-muted); width: 80px; cursor: default; }
-        .input-row input { flex: 1; max-width: 150px; padding: 8px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.1em; font-weight: 600; background: #fff; color: var(--text-main); cursor: text; transition: var(--transition); }
-        .input-row input:focus { outline: none; border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); }
+        .input-row input[type="number"] { 
+            flex: 1; 
+            max-width: 150px; 
+            padding: 8px 12px; 
+            border: 2px solid var(--border); 
+            border-radius: var(--radius-sm); 
+            text-align: right; 
+            font-size: 1.1em; 
+            font-weight: 600; 
+            background: #fff; 
+            color: var(--text-main); 
+            cursor: text; 
+            transition: var(--transition); 
+        }
+        .input-row input[type="number"]:focus { outline: none; border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); }
+        .input-row input[type="number"]:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+        .input-row.disabled-row { opacity: 0.5; filter: grayscale(100%); }
 
-        /* Step 3 Grid Redesign */
-        .line-by-line-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .line-item { display: flex; flex-direction: column; align-items: stretch; background: var(--bg-surface); padding: 16px 20px; border-radius: var(--radius-md); border: 1px solid var(--border); transition: var(--transition); box-shadow: var(--shadow-sm); }
+        /* FIXED DIE VALIDATION GRID */
+        #dieInputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        /* Line-By-Line Container (Stage 3 Verification) */
+        .line-by-line-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 16px; 
+            margin-bottom: 24px; 
+        }
+        .line-item { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: stretch; 
+            background: var(--bg-surface); 
+            padding: 16px 20px; 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--border); 
+            transition: var(--transition); 
+            box-shadow: var(--shadow-sm); 
+        }
         .line-item:focus-within { border-color: var(--text-muted); box-shadow: 0 0 0 3px var(--neutral-faint); transform: translateY(-1px); }
-        .line-item .label-info { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .line-item .label-info { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-weight: 700; 
+            color: var(--text-main); 
+            font-size: 1.05em; 
+            margin-bottom: 12px; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 12px; 
+        }
         .line-item .label-info span { background: var(--neutral-faint); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 700; border: 1px solid var(--border); letter-spacing: 0.5px; }
-        
         .line-input-group { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .line-target-text { font-size: 0.85em; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
         .line-target-text span.val { color: var(--text-main); font-weight: 700; font-size: 1.3em; display: block; margin-top: 2px; }
-        
         .line-item input { flex: 1; max-width: 140px; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: right; font-size: 1.25em; font-weight: 700; color: var(--text-main); background: #f8fafc; cursor: text; transition: var(--transition); }
         .line-item input:focus { outline: none; border-color: var(--text-muted); background: #fff; }
 
+        /* ==========================================================================
+           6. DASHBOARDS, KPIS & ALERT BANNERS
+           ========================================================================== */
+        
+        .global-stats-banner { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 24px; }
+        .global-stat { background: var(--bg-surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm); }
+        .global-stat .lbl { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+        .global-stat .val { font-size: 1.6em; font-weight: 800; color: var(--text-main); }
+        
         .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #fff; border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px; text-align: center; box-shadow: var(--shadow-sm); }
         .stats-item .title { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
         .stats-item .val { font-size: 1.25em; font-weight: 600; color: var(--text-main); margin-top: 4px; }
 
-        .pairing-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
-        .pairing-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 24px 20px; box-shadow: var(--shadow-sm); border-top: 6px solid var(--text-muted); text-align: center; transition: all 0.2s ease; }
-        .pairing-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); border-color: var(--text-muted); }
-        .pairing-card .station-num { font-size: 0.95em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 1px; }
-        .pairing-card .match-main { font-size: 1.5em; font-weight: 800; color: var(--text-main); margin-bottom: 6px; line-height: 1.2; }
-
         .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
-        .kpi-tile { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; text-align: center; box-shadow: var(--shadow-sm); }
+        .kpi-tile { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; text-align: center; box-shadow: var(--shadow-sm); transition: var(--transition); }
+        .kpi-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         .kpi-tile .lbl { font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; }
         .kpi-tile .val { font-size: 1.5em; font-weight: 600; color: var(--text-main); }
         .kpi-tile.pass { border-bottom: 5px solid var(--success); }
         .kpi-tile.pass .val { color: var(--success); font-weight: 700; }
         .kpi-tile.fail { border-bottom: 5px solid var(--danger); }
         .kpi-tile.fail .val { color: var(--danger); font-weight: 700; }
+        .kpi-tile.warn { border-bottom: 5px solid var(--warning); }
+        .kpi-tile.warn .val { color: var(--warning); font-weight: 700; }
+
+        /* Pairing & Swapping Cards */
+        .pairing-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
+        .pairing-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius-md); padding: 24px 20px; box-shadow: var(--shadow-sm); border-top: 6px solid var(--text-muted); text-align: center; transition: all 0.2s ease; }
+        .pairing-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); border-color: var(--text-muted); }
+        .pairing-card .station-num { font-size: 0.95em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 1px; }
+        .pairing-card .match-main { font-size: 1.5em; font-weight: 800; color: var(--text-main); margin-bottom: 6px; line-height: 1.2; }
 
         .swap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .swap-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); }
@@ -224,68 +529,145 @@
         .swap-meta .lbl { font-size: 0.75em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; display: block; letter-spacing: 0.5px; }
         .swap-meta .gap { font-size: 1.15em; font-weight: 700; color: var(--text-main); }
 
-        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1em; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); }
-        .data-table th, .data-table td { padding: 16px 20px; text-align: center; border-bottom: 1px solid var(--border); }
-        .data-table th { background: var(--bg-sidebar); color: #fff; font-weight: 600; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; position: sticky; top: 0; }
-        .data-table tbody tr { background: #fff; transition: var(--transition); }
-        .data-table tbody tr.clickable-row { cursor: pointer; }
-        .data-table tbody tr.clickable-row:hover { background-color: var(--neutral-faint); }
-        .data-table tbody td { font-weight: 500; color: var(--text-main); }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.2s ease; }
-        .modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
-        .modal-content { background: var(--bg-surface); width: 95%; max-width: 1200px; max-height: 90vh; overflow-y: auto; padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); position: relative; }
-        
-        .hidden { display: none !important; }
-        
-        /* Alert Banners */
+        /* Alerts */
         .alert-banner { padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; font-size: 1.05em; font-weight: 600; display: flex; flex-direction: column; gap: 8px; border: 2px solid transparent; }
         .alert-error { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
         .alert-warning { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
+
+        /* ==========================================================================
+           7. CHARTS & CANVAS
+           ========================================================================== */
+        .spc-dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .chart-wrapper { 
+            width: 100%; 
+            position: relative; 
+            background: #fff; 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius-md); 
+            padding: 16px; 
+            overflow: hidden; 
+            box-shadow: var(--shadow-sm);
+        }
+        .chart-xbar { height: 450px; }
+        .chart-rbar { height: 280px; }
+        
+        .mini-chart-wrapper { width: 100%; height: 260px; position: relative; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+        canvas { width: 100%; height: 100%; cursor: crosshair; display: block; }
+
+        /* Tooltips */
+        #spc-tooltip, #r-tooltip {
+            position: absolute; pointer-events: none; background: rgba(255,255,255,0.98); backdrop-filter: blur(8px);
+            border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; box-shadow: var(--shadow-float);
+            opacity: 0; transition: opacity 0.15s ease; z-index: 100; min-width: 240px; font-size: 0.9em;
+        }
+        .tt-head { font-weight: 700; font-size: 1.05em; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+        .tt-row { display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+        .tt-row span.val { color: var(--text-main); font-weight: 600; font-size: 1.05em; }
+
+        .we-rule-alert {
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: var(--danger-bg);
+            border-left: 4px solid var(--danger);
+            color: var(--danger);
+            font-size: 0.85em;
+            font-weight: 700;
+            border-radius: 4px;
+        }
+
+        /* ==========================================================================
+           8. DATA TABLES & MODALS
+           ========================================================================== */
+        
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1em; background: #fff;}
+        .data-table th, .data-table td { padding: 16px 20px; text-align: center; border-bottom: 1px solid var(--border); }
+        .data-table th { background: var(--bg-sidebar); color: #fff; font-weight: 600; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; position: sticky; top: 0; z-index: 10;}
+        .data-table tbody tr { transition: var(--transition); }
+        .data-table tbody tr.clickable-row { cursor: pointer; }
+        .data-table tbody tr.clickable-row:hover { background-color: var(--neutral-faint); transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); position: relative; z-index: 5;}
+        .data-table tbody td { font-weight: 500; color: var(--text-main); }
+        
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.2s ease; }
+        .modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
+        .modal-content { background: var(--bg-surface); width: 95%; max-width: 1300px; max-height: 92vh; overflow-y: auto; padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); position: relative; }
+        
+        .hidden { display: none !important; }
+        
     </style>
 </head>
 <body>
 
-    <div id="spc-tooltip"></div>
+    <!-- Toast Notifications -->
     <div id="toast-container"></div>
     
+    <!-- Hidden File Input for JSON Imports -->
     <input type="file" id="importJsonFile" accept=".json" style="display:none" onchange="processJsonImport(event)">
 
+    <!-- =========================================================================
+         TOP NAVIGATION BAR
+         ========================================================================= -->
     <header class="topbar">
         <div class="brand">
-            Punch Optimizer
+            <span class="brand-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            </span>
+            Punch Validation
         </div>
         <nav class="nav-menu">
-            <div class="nav-item active" onclick="nav('view-entry', this)">
+            <div class="nav-item active" onclick="nav('view-validation', this)">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                Punch & Holder Assembly
-            </div>
-            <div class="nav-item" onclick="nav('view-dies', this)">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14.5 12a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>
-                Die Validation
+                Validation Workflow
             </div>
             <div class="nav-item" onclick="nav('view-spc', this)">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-                SPC Chart
+                SPC Dashboard
             </div>
             <div class="nav-item" onclick="nav('view-log', this)">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Audit Log
+                Master Audit Log
             </div>
         </nav>
     </header>
 
+    <!-- =========================================================================
+         MAIN WORKSPACE AREA
+         ========================================================================= -->
     <main class="workspace">
 
-        <!-- VIEW 1: PUNCH & HOLDER -->
-        <section id="view-entry" class="view-section active">
+        <!-- =====================================================================
+             VIEW 1: CONSOLIDATED VALIDATION WORKFLOW
+             ===================================================================== -->
+        <section id="view-validation" class="view-section active">
             
             <div class="card">
-                <div class="card-header">
+                
+                <!-- Sub-Workflow Selector -->
+                <div class="mode-selector">
+                    <div class="mode-btn active" onclick="switchWorkflow('mod-punch', this)">Punch & Holder Assembly</div>
+                    <div class="mode-btn" onclick="switchWorkflow('mod-natoli', this)">Natoli Upper / Lower</div>
+                    <div class="mode-btn" onclick="switchWorkflow('mod-dies', this)">Die Validation</div>
+                </div>
+
+                <!-- SHARED METADATA BLOCK -->
+                <div class="card-header" style="padding-top: 10px;">
                     <div class="card-title">Step 1: Run Metadata &amp; Raw Measurements</div>
                     <div style="display:flex; gap:12px;">
-                        <button class="btn btn-outline" onclick="generateStage1TestData()">Fill P & H Data</button>
-                        <button class="btn btn-outline" onclick="clearInputs()">Clear All</button>
+                        <button class="btn btn-outline" id="btnTest" onclick="runActiveTest()">Fill Random Test Data</button>
+                        <button class="btn btn-outline" id="btnClear" onclick="runActiveClear()" style="color: var(--danger); border-color: var(--danger-border);">Clear All</button>
                     </div>
                 </div>
 
@@ -309,36 +691,110 @@
                     <div class="meta-field"><label>Range Spec (Max Spread)</label><input type="number" step="any" id="rangeSpec" placeholder="0.00100" value="0.00100"></div>
                 </div>
 
-                <div class="set-config-banner">
-                    <div class="set-config-info">
-                        <div class="set-config-title">Active Station Setup Count</div>
-                        <div class="set-config-sub">Enter total number of punch/holder stations for this press setup</div>
+                <!-- =============================================================
+                     SUB-MODULE: PUNCH & HOLDER 
+                     ============================================================= -->
+                <div id="mod-punch" class="workflow-module active">
+                    <div class="set-config-banner">
+                        <div class="set-config-info">
+                            <div class="set-config-title">Active Station Setup Count</div>
+                            <div class="set-config-sub">Enter total number of punch/holder stations for this press setup. Uncheck rows below to exclude specific IDs from optimization.</div>
+                        </div>
+                        <div class="set-config-input-wrap">
+                            <label style="font-weight: 600; color: var(--text-muted); font-size: 1.05em;">Total Sets:</label>
+                            <input type="number" id="numSets" value="12" min="1" max="50" onchange="buildInputGrids()" oninput="buildInputGrids()">
+                        </div>
                     </div>
-                    <div class="set-config-input-wrap">
-                        <label style="font-weight: 600; color: var(--text-muted); font-size: 1.05em;">Total Sets:</label>
-                        <input type="number" id="numSets" value="12" min="1" max="50" onchange="buildInputGrids()" oninput="buildInputGrids()">
+
+                    <div class="entry-grid">
+                        <div>
+                            <div class="entry-col-title" id="holderColTitle">Individual Holders (H1 - H12)</div>
+                            <div id="holderInputs"></div>
+                        </div>
+                        <div>
+                            <div class="entry-col-title" id="punchColTitle">Individual Punches (P1 - P12)</div>
+                            <div id="punchInputs"></div>
+                        </div>
                     </div>
+
+                    <div style="display: flex; gap: 24px; margin-bottom: 40px;">
+                        <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="holderVarianceCanvas"></canvas></div>
+                        <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="punchVarianceCanvas"></canvas></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="calculateStage1Pairings()">Calculate Optimal Component Pairings &#10142;</button>
                 </div>
 
-                <div class="entry-grid">
-                    <div>
-                        <div class="entry-col-title" id="holderColTitle">Individual Holders (H1 - H12)</div>
-                        <div id="holderInputs"></div>
+                <!-- =============================================================
+                     SUB-MODULE: NATOLI UPPER/LOWER 
+                     ============================================================= -->
+                <div id="mod-natoli" class="workflow-module">
+                    <div class="set-config-banner">
+                        <div class="set-config-info">
+                            <div class="set-config-title">Active Station Setup Count</div>
+                            <div class="set-config-sub">Enter total number of upper/lower punch pairs. Uncheck rows below to completely exclude specific IDs.</div>
+                        </div>
+                        <div class="set-config-input-wrap">
+                            <label style="font-weight: 600; color: var(--text-muted); font-size: 1.05em;">Total Sets:</label>
+                            <input type="number" id="n_numSets" value="22" min="1" max="50" onchange="buildNatoliGrids()" oninput="buildNatoliGrids()">
+                        </div>
                     </div>
-                    <div>
-                        <div class="entry-col-title" id="punchColTitle">Individual Punches (P1 - P12)</div>
-                        <div id="punchInputs"></div>
+
+                    <div class="entry-grid">
+                        <div>
+                            <div class="entry-col-title" id="upperColTitle">Upper Punches (U1 - U22)</div>
+                            <div id="upperInputs"></div>
+                        </div>
+                        <div>
+                            <div class="entry-col-title" id="lowerColTitle">Lower Punches (L1 - L22)</div>
+                            <div id="lowerInputs"></div>
+                        </div>
                     </div>
+
+                    <div style="display: flex; gap: 24px; margin-bottom: 40px;">
+                        <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="upperVarianceCanvas"></canvas></div>
+                        <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="lowerVarianceCanvas"></canvas></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="calculateNatoliPairings()">Calculate Optimal Component Pairings &#10142;</button>
                 </div>
 
-                <div style="display: flex; gap: 24px; margin-bottom: 40px;">
-                    <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="holderVarianceCanvas"></canvas></div>
-                    <div class="mini-chart-wrapper" style="flex: 1;"><canvas id="punchVarianceCanvas"></canvas></div>
-                </div>
+                <!-- =============================================================
+                     SUB-MODULE: DIE VALIDATION 
+                     ============================================================= -->
+                <div id="mod-dies" class="workflow-module">
+                    <div class="set-config-banner">
+                        <div class="set-config-info">
+                            <div class="set-config-title">Active Die Count</div>
+                            <div class="set-config-sub">Enter total number of dies for this setup. Uncheck rows below to exclude specific IDs.</div>
+                        </div>
+                        <div class="set-config-input-wrap">
+                            <label style="font-weight: 600; color: var(--text-muted); font-size: 1.05em;">Total Dies:</label>
+                            <input type="number" id="numDies" value="12" min="1" max="50" onchange="buildDieGrid()" oninput="buildDieGrid()">
+                        </div>
+                    </div>
 
-                <button class="btn btn-primary" onclick="calculateStage1Pairings()">Calculate Optimal Component Pairings &#10142;</button>
+                    <div class="entry-grid" style="grid-template-columns: 1fr;">
+                        <div>
+                            <div class="entry-col-title" id="dieColTitle" style="border-bottom: none; font-size: 1.05em; margin-bottom: 16px;">Individual Dies (D1 - D12)</div>
+                            <!-- Fixed the layout issue here with CSS grid auto-fit -->
+                            <div id="dieInputs"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 24px; margin-bottom: 40px;">
+                        <div class="mini-chart-wrapper" style="flex: 1; height: 300px;"><canvas id="dieVarianceCanvas"></canvas></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="verifyDies()">Validate Die Set &#10142;</button>
+                </div>
             </div>
 
+            <!-- =================================================================
+                 RESULT CARDS (Generated dynamically based on workflow)
+                 ================================================================= -->
+            
+            <!-- PUNCH & HOLDER: STAGE 1 RESULTS (Matching) -->
             <div id="stage1ResultsCard" class="card hidden">
                 <div class="card-header">
                     <div class="card-title">Step 2: Pre-Assembly Instructions (Match &amp; Build)</div>
@@ -372,6 +828,7 @@
                 <div id="pairingCardsGrid" class="pairing-cards-grid"></div>
             </div>
 
+            <!-- PUNCH & HOLDER: STAGE 2 RESULTS (Assembled Verification) -->
             <div id="stage2VerificationCard" class="card hidden">
                 <div class="card-header">
                     <div class="card-title">Step 3: Enter Assembled Total Lengths</div>
@@ -386,7 +843,12 @@
                 <button class="btn btn-primary" onclick="verifyAssembledPress()">Verify Press Assembly &amp; Generate Dashboard &#10142;</button>
             </div>
 
-            <div id="resultsDashboard" class="hidden">
+            <!-- PUNCH & HOLDER: FINAL DASHBOARD -->
+            <div id="resultsDashboard" class="card hidden">
+                <div class="card-header">
+                    <div class="card-title">Final Assembly Validation Dashboard</div>
+                </div>
+                
                 <div class="kpi-row">
                     <div class="kpi-tile" id="kpiStatusTile">
                         <div class="lbl">Setup Status</div>
@@ -410,7 +872,7 @@
                     </div>
                 </div>
 
-                <div class="mini-chart-wrapper" style="margin-bottom: 32px; height: 300px;">
+                <div class="mini-chart-wrapper" style="margin-bottom: 32px; height: 350px;">
                     <canvas id="actualVsTargetCanvas"></canvas>
                 </div>
 
@@ -429,60 +891,59 @@
                 </div>
             </div>
 
-        </section>
-
-        <!-- VIEW 2: DIE VALIDATION -->
-        <section id="view-dies" class="view-section">
-            <div class="card">
+            <!-- NATOLI UPPER/LOWER: RESULTS DASHBOARD -->
+            <div id="natoliResultsDashboard" class="hidden card">
                 <div class="card-header">
-                    <div class="card-title">Die Validation &amp; Measurements</div>
-                    <div style="display:flex; gap:12px;">
-                        <button class="btn btn-outline" onclick="generateDieTestData()">Fill Die Data</button>
-                        <button class="btn btn-outline" onclick="clearDieInputs()">Clear All</button>
+                    <div class="card-title">Step 2: Natoli Pairing Instructions & Validation Dashboard</div>
+                </div>
+                
+                <div id="natoliOptimizationAlerts" style="margin-bottom: 24px;"></div>
+
+                <div class="kpi-row" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="kpi-tile" id="n_kpiStatusTile">
+                        <div class="lbl">Predicted Status</div>
+                        <div class="val" id="n_valStatus">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Optimized Spread</div>
+                        <div class="val" id="n_optRange">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Process Mean</div>
+                        <div class="val" id="n_valMean">-</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="lbl">Std Dev (&sigma;)</div>
+                        <div class="val" id="n_valSigma">-</div>
                     </div>
                 </div>
 
-                <div class="set-config-banner" style="display: flex; flex-wrap: wrap; gap: 24px;">
-                    <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; min-width: 300px; padding-right: 24px; border-right: 2px solid var(--border);">
-                        <div class="set-config-info">
-                            <div class="set-config-title">Active Die Count</div>
-                            <div class="set-config-sub">Enter total number of dies for this setup</div>
-                        </div>
-                        <div class="set-config-input-wrap">
-                            <input type="number" id="numDies" value="12" min="1" max="50" onchange="buildDieGrid()" oninput="buildDieGrid()">
-                        </div>
-                    </div>
-                    
-                    <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; min-width: 300px; padding-left: 8px;">
-                        <div class="set-config-info">
-                            <div class="set-config-title">Range Spec (Max Spread)</div>
-                            <div class="set-config-sub">Maximum allowable die thickness variance</div>
-                        </div>
-                        <div class="set-config-input-wrap">
-                            <input type="number" step="any" id="dieRangeSpec" value="0.00100">
-                        </div>
-                    </div>
+                <div class="mini-chart-wrapper" style="margin-bottom: 32px; height: 350px;">
+                    <canvas id="n_actualVsTargetCanvas"></canvas>
                 </div>
 
-                <div class="entry-grid" style="grid-template-columns: 1fr;">
-                    <div>
-                        <div class="entry-col-title" id="dieColTitle" style="border-bottom: none; font-size: 1.05em; margin-bottom: 16px;">Individual Dies (D1 - D12)</div>
-                        <div id="dieInputs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;"></div>
-                    </div>
-                </div>
+                <p style="margin-bottom: 16px; color: var(--text-muted); font-weight: 500; font-size: 1.05em;">
+                    Pair the Upper and Lower punch for each station exactly as shown below. <br>
+                    <span style="color: var(--text-main); font-weight: 600;">Set # corresponds directly to Upper Punch # (e.g. Set 1 uses Upper 1).</span>
+                </p>
+                <div id="n_pairingCardsGrid" class="pairing-cards-grid" style="margin-bottom: 32px;"></div>
 
-                <div style="display: flex; gap: 24px; margin-bottom: 40px;">
-                    <div class="mini-chart-wrapper" style="flex: 1; height: 260px;"><canvas id="dieVarianceCanvas"></canvas></div>
+                <div style="display: flex; gap: 20px; margin-bottom: 24px;">
+                    <button class="btn btn-accent" style="flex: 1; padding: 20px; font-size: 1.1em;" onclick="sendEmailToFlowNatoli()">
+                        &#9993; Send to SharePoint (via Email)
+                    </button>
+                    <button class="btn btn-outline" style="flex: 1; padding: 20px; font-size: 1.1em;" onclick="exportToAdvancedExcel()">
+                        &#128190; Export Multi-Sheet Excel
+                    </button>
                 </div>
-
-                <button class="btn btn-primary" onclick="verifyDies()">Validate Die Set &#10142;</button>
             </div>
 
+            <!-- DIE VALIDATION: RESULTS DASHBOARD -->
             <div id="dieResultsCard" class="card hidden">
                 <div class="card-header">
                     <div class="card-title">Die Validation Results</div>
                 </div>
-                
+
                 <div id="dieOptimizationAlerts" style="margin-bottom: 24px;"></div>
 
                 <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr);">
@@ -500,97 +961,146 @@
                     </div>
                 </div>
 
-                <div id="dieAlertBox" style="padding: 24px; border-radius: var(--radius-md); font-size: 1.15em; font-weight: 700; text-align: center; display: none;">
+                <div id="dieAlertBox" style="padding: 24px; border-radius: var(--radius-md); font-size: 1.15em; font-weight: 700; text-align: center; display: none; margin-bottom: 24px;">
+                </div>
+                
+                <div style="display: flex; gap: 20px; margin-bottom: 24px;">
+                    <button class="btn btn-outline" style="flex: 1; padding: 20px; font-size: 1.1em;" onclick="exportToAdvancedExcel()">
+                        &#128190; Export Full SPC History Excel
+                    </button>
                 </div>
             </div>
+
         </section>
 
-        <!-- VIEW 3: SPC CHART -->
+        <!-- =====================================================================
+             VIEW 2: ADVANCED SPC CHART DASHBOARD
+             ===================================================================== -->
         <section id="view-spc" class="view-section">
             <div class="card" style="padding-bottom: 0;">
                 <div class="card-header">
-                    <div class="card-title">SPC Quality Control Dashboard</div>
-                    <button class="btn btn-outline" onclick="loadHistoryFromStorage()">Refresh Graph</button>
+                    <div class="card-title">SPC Quality Control Dashboard (X-Bar &amp; R Charts)</div>
+                    <div style="display:flex; gap: 12px; align-items: center;">
+                        <select id="spcFilterType" onchange="renderSpcChart()" style="padding: 8px 12px; border-radius: var(--radius-sm); border: 2px solid var(--border); font-weight: 600;">
+                            <option value="ALL">Show All Processes</option>
+                            <option value="Punch">Punch & Holder Only</option>
+                            <option value="Natoli">Natoli Upper/Lower Only</option>
+                            <option value="Die">Die Sets Only</option>
+                        </select>
+                        <button class="btn btn-outline" onclick="loadHistoryFromStorage()">Refresh Graph</button>
+                    </div>
                 </div>
 
                 <div class="global-stats-banner">
                     <div class="global-stat">
-                        <div class="lbl">Global Process Cp</div>
+                        <div class="lbl">Process Cp</div>
                         <div class="val" id="gCp">-</div>
                     </div>
                     <div class="global-stat">
-                        <div class="lbl">Global Process Cpk</div>
+                        <div class="lbl">Process Cpk</div>
                         <div class="val" id="gCpk">-</div>
                     </div>
                     <div class="global-stat">
-                        <div class="lbl">Avg Run Range</div>
+                        <div class="lbl">Process Pp</div>
+                        <div class="val" id="gPp">-</div>
+                    </div>
+                    <div class="global-stat">
+                        <div class="lbl">Process Ppk</div>
+                        <div class="val" id="gPpk">-</div>
+                    </div>
+                    <div class="global-stat">
+                        <div class="lbl">Avg Range (<span style="font-family: serif; font-style: italic;">R&#772;</span>)</div>
                         <div class="val" id="gRange">-</div>
                     </div>
                     <div class="global-stat">
-                        <div class="lbl">Total Runs Tracked</div>
+                        <div class="lbl">Runs Tracked</div>
                         <div class="val" id="gTotal">0</div>
                     </div>
                 </div>
 
-                <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 1.05em; font-weight: 500;">
-                    Scatter Chart Tracking: Each vertical slice represents one run showing its Maximum, Minimum, and Mean (connected). 
-                    <br><span style="font-size: 0.9em;">Hover over vertical zones to inspect details. Green zone = Optimal Target (&plusmn; 0.0005).</span>
-                </p>
-                <div class="chart-wrapper" style="margin-bottom: 32px; height: 500px;">
-                    <div id="spc-tooltip"></div>
-                    <canvas id="spcCanvas"></canvas>
+                <div style="margin-bottom: 20px; color: var(--text-muted); font-size: 1.05em; font-weight: 500; display:flex; justify-content: space-between; align-items:flex-end;">
+                    <div>
+                        <strong>X-Bar Chart (Means) &amp; Range Chart (R).</strong> Automatically runs Western Electric Rules. 
+                        <br><span style="font-size: 0.9em;">Hover points for run details. Rule violations are highlighted with large <strong style="color:var(--danger)">RED</strong> dots.</span>
+                    </div>
+                    <div style="font-size: 0.85em; text-align: right;">
+                        <span style="display:inline-block; width:12px; height:2px; background:var(--spc-ucl); margin-right:4px; vertical-align:middle;"></span> LCL/UCL &nbsp;&nbsp;
+                        <span style="display:inline-block; width:12px; height:2px; background:var(--spc-sigma2); margin-right:4px; vertical-align:middle;"></span> &plusmn; 2&sigma; &nbsp;&nbsp;
+                        <span style="display:inline-block; width:12px; height:2px; background:var(--spc-sigma1); margin-right:4px; vertical-align:middle;"></span> &plusmn; 1&sigma;
+                    </div>
+                </div>
+                
+                <!-- SPC Dashboards wrapper -->
+                <div class="spc-dashboard-grid">
+                    <div class="chart-wrapper chart-xbar">
+                        <div id="spc-tooltip"></div>
+                        <canvas id="spcCanvasX"></canvas>
+                    </div>
+                    
+                    <div class="chart-wrapper chart-rbar">
+                        <div id="r-tooltip"></div>
+                        <canvas id="spcCanvasR"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- VIEW 4: AUDIT LOG -->
+        <!-- =====================================================================
+             VIEW 3: MASTER AUDIT LOG & EXPORT
+             ===================================================================== -->
         <section id="view-log" class="view-section">
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Master Setup Audit Log</div>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn btn-outline" onclick="clearHistory()">Clear Data</button>
+                        <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger-border);" onclick="clearHistory()">Clear Data</button>
                         <button class="btn btn-outline" onclick="importJsonData()">Restore (JSON)</button>
                         <button class="btn btn-outline" onclick="exportJsonData()">Backup (JSON)</button>
                         <button class="btn btn-accent" onclick="exportToAdvancedExcel()">Export Multi-Sheet Excel</button>
                     </div>
                 </div>
                 <p style="margin-bottom: 24px; color: var(--text-muted); font-weight: 500; font-size: 1.05em; line-height: 1.5;">
-                    Clicking Export will generate a complete Excel workbook. Every individual historical run is saved to its own dedicated, cleanly formatted worksheet containing all recorded measurements and statistics.
+                    Clicking Export generates a complete Excel workbook. Every historical run is saved to its own dedicated, cleanly formatted worksheet containing all recorded measurements and statistics.
                     <br><span style="color: var(--text-main); font-weight: 700;">Click on any row below to instantly view its full run dashboard.</span>
                 </p>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Operator</th>
-                            <th>Tool ID</th>
-                            <th>Batch</th>
-                            <th>Range</th>
-                            <th>Mean</th>
-                            <th>Cpk</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logBody"></tbody>
-                </table>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Type</th>
+                                <th>Operator</th>
+                                <th>Tool ID</th>
+                                <th>Batch</th>
+                                <th>Range</th>
+                                <th>Mean</th>
+                                <th>Cpk</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logBody"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- HISTORICAL RUN OVERLAY MODAL -->
+    <!-- =========================================================================
+         HISTORICAL RUN OVERLAY MODAL
+         ========================================================================= -->
     <div id="historyModal" class="modal-overlay hidden">
         <div class="modal-content">
             
             <div class="card-header" style="border-bottom: 2px solid var(--border); padding-bottom: 24px; margin-bottom: 32px;">
                 <div class="card-title" style="font-size: 1.8em;">
                     Historical Run Audit 
+                    <span id="modTypeBadge" style="background:var(--bg-sidebar); color:#fff; font-size:0.5em; padding:4px 10px; border-radius:4px; margin-left:12px; vertical-align:middle;"></span>
                     <span id="modTitle" style="color:var(--text-muted); font-size:0.7em; margin-left:16px; font-weight:500;"></span>
                 </div>
                 <div style="display: flex; gap: 20px; align-items: center;">
                     <div id="modBigStatus" style="padding: 12px 32px; border-radius: var(--radius-sm); font-weight: 700; font-size: 1.3em; letter-spacing: 1.5px;"></div>
-                    <button class="btn btn-outline" onclick="closeModal()">Close</button>
+                    <button class="btn btn-outline" onclick="closeModal()">Close Window</button>
                 </div>
             </div>
 
@@ -617,39 +1127,33 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 24px; margin-bottom: 32px;">
+            <div id="modChartArea" style="display: flex; gap: 24px; margin-bottom: 32px;">
                 <div class="mini-chart-wrapper" style="flex: 1; box-shadow: var(--shadow-sm);"><canvas id="modHolderVarianceCanvas"></canvas></div>
                 <div class="mini-chart-wrapper" style="flex: 1; box-shadow: var(--shadow-sm);"><canvas id="modPunchVarianceCanvas"></canvas></div>
             </div>
 
-            <div class="mini-chart-wrapper" style="margin-bottom: 40px; height: 360px; box-shadow: var(--shadow-sm);">
+            <div id="modDualChartArea" class="mini-chart-wrapper" style="margin-bottom: 40px; height: 360px; box-shadow: var(--shadow-sm);">
                 <canvas id="modChartCanvas"></canvas>
             </div>
 
-            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
-                <div class="card-title" style="font-size: 1.35em;">Station-by-Station Pairings & Measurements</div>
+            <div class="card-header" id="modTableTitleHeader" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
+                <div class="card-title" id="modTableTitle" style="font-size: 1.35em;">Station-by-Station Pairings & Measurements</div>
             </div>
-            <div style="overflow-x: auto; margin-bottom: 40px;">
-                <table class="data-table" style="border: 2px solid var(--border);">
-                    <thead style="background: var(--bg-sidebar); color: #fff;">
-                        <tr>
-                            <th style="padding: 20px;">Station</th>
-                            <th style="padding: 20px;">Optimized Pairing</th>
-                            <th>Punch Length</th>
-                            <th>Holder Length</th>
-                            <th>Target Height</th>
-                            <th>Actual Height</th>
-                            <th>Deviation</th>
-                        </tr>
+            <div class="table-container" style="margin-bottom: 40px;">
+                <table class="data-table" style="border: none;">
+                    <thead id="modMeasurementHead" style="background: var(--bg-sidebar); color: #fff;">
+                        <!-- Injected via JS -->
                     </thead>
                     <tbody id="modMeasurementBody"></tbody>
                 </table>
             </div>
 
-            <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
-                <div class="card-title" style="font-size: 1.2em;">Punch Fine-Tuning Swaps Identified</div>
+            <div id="modSwapGridContainer">
+                <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px;">
+                    <div class="card-title" style="font-size: 1.2em;">Fine-Tuning Swaps Identified</div>
+                </div>
+                <div id="modSwapGrid" class="swap-grid" style="margin-bottom: 40px;"></div>
             </div>
-            <div id="modSwapGrid" class="swap-grid" style="margin-bottom: 40px;"></div>
 
             <div class="card-header" style="border: none; padding-bottom: 0; margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 32px;">
                 <div class="card-title" style="font-size: 1.2em; color: var(--text-muted);">Run Metadata Reference</div>
@@ -669,223 +1173,61 @@
     </div>
 
 <script>
-    // --- Global State ---
+    /* ==========================================================================
+       CORE APPLICATION STATE & CONSTANTS
+       ========================================================================== */
     let appHistory = [];
     let activeStage1Pairs = [];
-    let spcRenderData = []; 
+    let spcRenderDataX = []; 
+    let spcRenderDataR = []; 
     let latestRunRecord = null;
+    let n_activePairs = [];
+    
+    let currentWorkflow = 'mod-punch'; // track active sub-view
+    const STORAGE_KEY = 'punch_excel_history_pro_v12'; // Bumped version for data safety
 
+    // Statistical constants for estimating control limits based on subgroup size (n)
+    const D2_TABLE = { 2:1.128, 3:1.693, 4:2.059, 5:2.326, 6:2.534, 7:2.704, 8:2.847, 9:2.970, 10:3.078, 11:3.173, 12:3.258, 13:3.336, 14:3.407, 15:3.472, 16:3.532, 17:3.588, 18:3.640, 19:3.689, 20:3.735, 21:3.778, 22:3.819, 23:3.858, 24:3.895, 25:3.931 };
+    const D3_TABLE = { 2:0, 3:0, 4:0, 5:0, 6:0, 7:0.076, 8:0.136, 9:0.184, 10:0.223, 11:0.256, 12:0.283, 13:0.307, 14:0.328, 15:0.347, 16:0.363, 17:0.378, 18:0.391, 19:0.403, 20:0.415, 21:0.425, 22:0.434, 23:0.443, 24:0.451, 25:0.459 };
+    const D4_TABLE = { 2:3.267, 3:2.574, 4:2.282, 5:2.114, 6:2.004, 7:1.924, 8:1.864, 9:1.816, 10:1.777, 11:1.744, 12:1.717, 13:1.693, 14:1.672, 15:1.653, 16:1.637, 17:1.622, 18:1.608, 19:1.596, 20:1.585, 21:1.575, 22:1.566, 23:1.557, 24:1.548, 25:1.541 };
+    const A2_TABLE = { 2:1.880, 3:1.023, 4:0.729, 5:0.577, 6:0.483, 7:0.419, 8:0.373, 9:0.337, 10:0.308, 11:0.285, 12:0.266, 13:0.249, 14:0.235, 15:0.223, 16:0.212, 17:0.203, 18:0.194, 19:0.187, 20:0.180, 21:0.173, 22:0.167, 23:0.162, 24:0.157, 25:0.153 };
+
+    function getSpcConst(n, table) {
+        if (n < 2) return table[2];
+        if (table[n]) return table[n];
+        return table[25]; // Approximation for >25
+    }
+
+    /* ==========================================================================
+       INITIALIZATION & EVENT LISTENERS
+       ========================================================================== */
     window.onload = function() {
         updateDateTime();
         buildInputGrids();
+        buildNatoliGrids();
         buildDieGrid();
-        updateLiveCharts();
-        loadHistoryFromStorage();
+        loadHistoryFromStorage(); // Also fires chart renders
     };
 
-    function updateDateTime() {
-        const now = new Date();
-        document.getElementById('date').value = now.toLocaleDateString('en-US');
-        document.getElementById('time').value = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    }
-
-    function showToast(msg, type = 'success') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = type === 'success' ? `<span>&#10004;</span> ${msg}` : `<span>&#9888;</span> ${msg}`;
-        container.appendChild(toast);
-        setTimeout(() => { toast.style.animation = 'slideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
-    }
-
-    function loadHistoryFromStorage() {
-        try {
-            appHistory = JSON.parse(localStorage.getItem('punch_excel_history_v10') || '[]');
-            renderLogTable();
-            calculateGlobalStats();
-            renderSpcChart();
-        } catch (err) {
-            console.warn("Storage load error:", err.message);
-        }
-    }
-
-    function sendEmailToFlow() {
-        if (!latestRunRecord) return showToast("Verify a run first!", "error");
+    function switchWorkflow(targetId, btnElement) {
+        document.querySelectorAll('.workflow-module').forEach(m => m.classList.remove('active'));
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         
-        const payload = {
-            date: latestRunRecord.date,
-            time: latestRunRecord.time,
-            op: latestRunRecord.op,
-            shift: latestRunRecord.shift,
-            toolId: latestRunRecord.toolId,
-            batch: latestRunRecord.batch,
-            press: latestRunRecord.press,
-            part: latestRunRecord.part,
-            numSets: parseInt(latestRunRecord.numSets),
-            partTol: latestRunRecord.partTol,
-            assemblyTol: latestRunRecord.assemblyTol,
-            rangeSpec: latestRunRecord.rangeSpec,
-            range: latestRunRecord.range,
-            mean: latestRunRecord.mean,
-            max: latestRunRecord.max,
-            min: latestRunRecord.min,
-            cpk: latestRunRecord.cpk,
-            status: latestRunRecord.status,
-            componentsJSON: JSON.stringify(latestRunRecord.components)
-        };
-
-        const subject = encodeURIComponent("[PUNCH-AUDIT-DATA]");
-        const body = encodeURIComponent(JSON.stringify(payload));
+        document.getElementById(targetId).classList.add('active');
+        btnElement.classList.add('active');
+        currentWorkflow = targetId;
         
-        // Opens operator's default Outlook client pre-filled
-        window.location.href = `mailto:shubham.sah@se.com?subject=${subject}&body=${body}`;
-        showToast("Email template generated. Click Send to log to SharePoint.", "success");
-    }
-
-    function getD2(n) {
-        const d2Table = { 2:1.128, 3:1.693, 4:2.059, 5:2.326, 6:2.534, 7:2.704, 8:2.847, 9:2.970, 10:3.078, 11:3.173, 12:3.258, 13:3.336, 14:3.407, 15:3.472, 16:3.532, 17:3.588, 18:3.640, 19:3.689, 20:3.735, 21:3.778, 22:3.819, 23:3.858, 24:3.895, 25:3.931 };
-        if (n < 2) return 1.128;
-        if (d2Table[n]) return d2Table[n];
-        return 3.931 + ((n - 25) * 0.03);
-    }
-
-    function buildInputGrids() {
-        const count = parseInt(document.getElementById('numSets').value) || 12;
-        const pCont = document.getElementById('punchInputs');
-        const hCont = document.getElementById('holderInputs');
-        const lineCont = document.getElementById('lineByLineContainer');
-        
-        document.getElementById('punchColTitle').innerText = `Individual Punches (P1 - P${count})`;
-        document.getElementById('holderColTitle').innerText = `Individual Holders (H1 - H${count})`;
-
-        pCont.innerHTML = '';
-        hCont.innerHTML = '';
-        lineCont.innerHTML = '';
-        
-        for (let i=1; i<=count; i++) {
-            pCont.innerHTML += `<div class="input-row"><label>P${i}</label><input type="number" id="p${i}" data-grp="p" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
-            hCont.innerHTML += `<div class="input-row"><label>H${i}</label><input type="number" id="h${i}" data-grp="h" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
-            
-            lineCont.innerHTML += `
-                <div class="line-item">
-                    <div class="label-info" id="rowLabel${i}">Set ${i} <span id="lblMatch${i}">Pending</span></div>
-                    <div class="line-input-group">
-                        <div class="line-target-text" id="lblTarget${i}">Target:<br><span class="val">--</span></div>
-                        <input type="number" id="cmb${i}" data-grp="cmb" data-idx="${i}" placeholder="0.00000">
-                    </div>
-                </div>`;
-        }
-        updateLiveCharts();
-    }
-
-    function buildDieGrid() {
-        const count = parseInt(document.getElementById('numDies').value) || 12;
-        const dCont = document.getElementById('dieInputs');
-        document.getElementById('dieColTitle').innerText = `Individual Dies (D1 - D${count})`;
-        dCont.innerHTML = '';
-        for (let i=1; i<=count; i++) {
-            dCont.innerHTML += `<div class="input-row" style="background:var(--bg-body);"><label style="width:50px;">D${i}</label><input type="number" id="d${i}" data-grp="d" data-idx="${i}" placeholder="0.00000" oninput="updateDieChart()"></div>`;
-        }
-        updateDieChart();
-    }
-
-    document.addEventListener('keydown', function(e) {
-        if(e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
-            if(e.key === '-' || e.key === 'Subtract' || e.key === 'e' || e.key === 'E' || e.key === '+') { e.preventDefault(); return; }
-            let grp = e.target.getAttribute('data-grp');
-            let idx = parseInt(e.target.getAttribute('data-idx'));
-            if (!grp) return;
-            
-            let count = grp === 'd' ? (parseInt(document.getElementById('numDies').value) || 12) : (parseInt(document.getElementById('numSets').value) || 12);
-
-            if (e.key === 'ArrowDown' || e.key === 'Enter') {
-                e.preventDefault();
-                if (idx < count) { let next = document.getElementById(`${grp}${idx + 1}`); if (next) { next.focus(); next.select(); } }
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (idx > 1) { let prev = document.getElementById(`${grp}${idx - 1}`); if (prev) { prev.focus(); prev.select(); } }
-            }
-        }
-    });
-
-    function generateStage1TestData() {
-        const count = parseInt(document.getElementById('numSets').value) || 12;
-        document.getElementById('opName').value = "Joe Operator";
-        document.getElementById('punchNum').value = "PM147";
-        document.getElementById('toolId').value = "TL-088";
-        document.getElementById('batchNum').value = "19266";
-        document.getElementById('pressNum').value = "2";
-        document.getElementById('partNum').value = "3-04";
-        document.getElementById('partTol').value = "0.00200";
-        document.getElementById('assemblyTol').value = "0.00400";
-        document.getElementById('rangeSpec').value = "0.00100"; 
-
-        for (let i=1; i<=count; i++) {
-            document.getElementById(`p${i}`).value = (0.88400 + (Math.random() * 0.00080)).toFixed(5);
-            document.getElementById(`h${i}`).value = (5.82600 + (Math.random() * 0.00120)).toFixed(5);
-        }
-        updateLiveCharts();
-        showToast("Randomized Punch & Holder test data populated.");
-    }
-
-    function generateStage3TestData() {
-        if(activeStage1Pairs.length === 0) return showToast("Calculate Optimal Pairings first!", "error");
-        const count = parseInt(document.getElementById('numSets').value) || 12;
-        for (let i=1; i<=count; i++) {
-            let ref = activeStage1Pairs.find(p => p.hId === i);
-            if(ref) {
-                let variance = (Math.random() * 0.00040) - 0.00020;
-                document.getElementById(`cmb${i}`).value = (ref.expTotal + variance).toFixed(5);
-            }
-        }
-        showToast("Randomized Assembled measurement test data populated.");
-    }
-
-    function generateDieTestData() {
-        const count = parseInt(document.getElementById('numDies').value) || 12;
-        for (let i=1; i<=count; i++) {
-            document.getElementById(`d${i}`).value = (1.12500 + (Math.random() * 0.00080)).toFixed(5);
-        }
-        updateDieChart();
-        showToast("Randomized Die measurement test data populated.");
-    }
-
-    function clearInputs() {
-        const count = parseInt(document.getElementById('numSets').value) || 12;
-        document.getElementById('opName').value = '';
-        document.getElementById('punchNum').value = '';
-        document.getElementById('toolId').value = '';
-        document.getElementById('batchNum').value = '';
-        document.getElementById('pressNum').value = '';
-        document.getElementById('partNum').value = '';
-        document.getElementById('partTol').value = '';
-        document.getElementById('assemblyTol').value = '';
-        document.getElementById('rangeSpec').value = '0.00100';
-
-        for (let i=1; i<=count; i++) {
-            let p = document.getElementById(`p${i}`); if (p) p.value = '';
-            let h = document.getElementById(`h${i}`); if (h) h.value = '';
-            let cmb = document.getElementById(`cmb${i}`); if (cmb) cmb.value = '';
-        }
+        // Hide open result cards to keep UI clean
         document.getElementById('stage1ResultsCard').classList.add('hidden');
         document.getElementById('stage2VerificationCard').classList.add('hidden');
         document.getElementById('resultsDashboard').classList.add('hidden');
-        document.getElementById('optimizationAlerts').innerHTML = '';
-        activeStage1Pairs = [];
-        latestRunRecord = null;
-        updateLiveCharts();
-        showToast("Inputs cleared.");
-    }
-
-    function clearDieInputs() {
-        const count = parseInt(document.getElementById('numDies').value) || 12;
-        for (let i=1; i<=count; i++) {
-            let d = document.getElementById(`d${i}`); if (d) d.value = '';
-        }
+        document.getElementById('natoliResultsDashboard').classList.add('hidden');
         document.getElementById('dieResultsCard').classList.add('hidden');
-        document.getElementById('dieOptimizationAlerts').innerHTML = '';
-        updateDieChart();
-        showToast("Die inputs cleared.");
+        
+        // Refit charts on view display
+        if(targetId === 'mod-punch') updateLiveCharts();
+        if(targetId === 'mod-natoli') updateNatoliCharts();
+        if(targetId === 'mod-dies') updateDieChart();
     }
 
     function nav(viewId, element) {
@@ -900,19 +1242,310 @@
         }
     }
 
+    /* ==========================================================================
+       UTILITIES & DATA GENERATION
+       ========================================================================== */
+    function updateDateTime() {
+        const now = new Date();
+        document.getElementById('date').value = now.toLocaleDateString('en-US');
+        document.getElementById('time').value = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = '&#10004;';
+        if(type==='error') icon = '&#10006;';
+        if(type==='warning') icon = '&#9888;';
+        if(type==='info') icon = '&#8505;';
+
+        toast.innerHTML = `<span style="font-size:1.2em;">${icon}</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { 
+            toast.style.animation = 'slideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'; 
+            setTimeout(() => toast.remove(), 350); 
+        }, 4000);
+    }
+
+    function runActiveTest() {
+        if(currentWorkflow === 'mod-punch') generateStage1TestData();
+        else if (currentWorkflow === 'mod-natoli') generateNatoliTestData();
+        else generateDieTestData();
+    }
+
+    function clearSharedMetadata() {
+        document.getElementById('opName').value = '';
+        document.getElementById('punchNum').value = '';
+        document.getElementById('toolId').value = '';
+        document.getElementById('batchNum').value = '';
+        document.getElementById('pressNum').value = '';
+        document.getElementById('partNum').value = '';
+        document.getElementById('partTol').value = '';
+        document.getElementById('assemblyTol').value = '';
+        document.getElementById('rangeSpec').value = '0.00100';
+    }
+
+    function runActiveClear() {
+        if(currentWorkflow === 'mod-punch') clearInputs();
+        else if (currentWorkflow === 'mod-natoli') clearNatoliInputs();
+        else clearDieInputs();
+    }
+
+    // Standard Math Utilities
+    const mathUtils = {
+        mean: (arr) => arr.reduce((a,b)=>a+b,0) / arr.length,
+        variance: (arr) => {
+            const m = mathUtils.mean(arr);
+            return arr.reduce((sq, n) => sq + Math.pow(n - m, 2), 0) / (arr.length - 1);
+        },
+        stdDevSample: (arr) => Math.sqrt(mathUtils.variance(arr)),
+        stdDevPop: (arr) => {
+            const m = mathUtils.mean(arr);
+            return Math.sqrt(arr.reduce((sq, n) => sq + Math.pow(n - m, 2), 0) / arr.length);
+        },
+        median: (arr) => {
+            const s = [...arr].sort((a,b) => a-b);
+            const mid = Math.floor(s.length / 2);
+            return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+        }
+    };
+
+    /* Keyboard Navigation for input grids */
+    document.addEventListener('keydown', function(e) {
+        if(e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+            if(e.key === '-' || e.key === 'Subtract' || e.key === 'e' || e.key === 'E' || e.key === '+') { e.preventDefault(); return; }
+            let grp = e.target.getAttribute('data-grp');
+            let idx = parseInt(e.target.getAttribute('data-idx'));
+            if (!grp) return;
+            
+            let count = 12;
+            if (grp === 'd') count = parseInt(document.getElementById('numDies').value) || 12;
+            else if (grp === 'u' || grp === 'l') count = parseInt(document.getElementById('n_numSets').value) || 22;
+            else count = parseInt(document.getElementById('numSets').value) || 12;
+
+            if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                e.preventDefault();
+                let nextIdx = idx + 1;
+                while(nextIdx <= count) {
+                    let next = document.getElementById(`${grp}${nextIdx}`);
+                    if (next && !next.disabled) { next.focus(); next.select(); break; }
+                    nextIdx++;
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                let prevIdx = idx - 1;
+                while(prevIdx >= 1) {
+                    let prev = document.getElementById(`${grp}${prevIdx}`);
+                    if (prev && !prev.disabled) { prev.focus(); prev.select(); break; }
+                    prevIdx--;
+                }
+            }
+        }
+    });
+
+    /* ==========================================================================
+       GRID BUILDERS & TOGGLES
+       ========================================================================== */
+    function toggleRow(checkbox, prefix, id, chartUpdateFunc) {
+        let inputEl = document.getElementById(`${prefix}${id}`);
+        let rowEl = inputEl.closest('.input-row');
+        if (checkbox.checked) {
+            inputEl.disabled = false;
+            rowEl.classList.remove('disabled-row');
+        } else {
+            inputEl.disabled = true;
+            inputEl.value = '';
+            rowEl.classList.add('disabled-row');
+        }
+        window[chartUpdateFunc](); 
+    }
+
+    function buildInputGrids() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        const pCont = document.getElementById('punchInputs');
+        const hCont = document.getElementById('holderInputs');
+        const lineCont = document.getElementById('lineByLineContainer');
+        
+        document.getElementById('punchColTitle').innerText = `Individual Punches (P1 - P${count})`;
+        document.getElementById('holderColTitle').innerText = `Individual Holders (H1 - H${count})`;
+
+        pCont.innerHTML = ''; hCont.innerHTML = ''; lineCont.innerHTML = '';
+        
+        for (let i=1; i<=count; i++) {
+            pCont.innerHTML += `<div class="input-row"><label class="toggle-switch"><input type="checkbox" checked onchange="toggleRow(this, 'p', ${i}, 'updateLiveCharts')"><span class="toggle-slider"></span><span class="label-text">P${i}</span></label><input type="number" id="p${i}" data-grp="p" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
+            hCont.innerHTML += `<div class="input-row"><label class="toggle-switch"><input type="checkbox" checked onchange="toggleRow(this, 'h', ${i}, 'updateLiveCharts')"><span class="toggle-slider"></span><span class="label-text">H${i}</span></label><input type="number" id="h${i}" data-grp="h" data-idx="${i}" placeholder="0.00000" oninput="updateLiveCharts()"></div>`;
+            
+            lineCont.innerHTML += `
+                <div class="line-item" id="cmbRow${i}">
+                    <div class="label-info" id="rowLabel${i}">Set ${i} <span id="lblMatch${i}">Pending</span></div>
+                    <div class="line-input-group">
+                        <div class="line-target-text" id="lblTarget${i}">Target:<br><span class="val">--</span></div>
+                        <input type="number" id="cmb${i}" data-grp="cmb" data-idx="${i}" placeholder="0.00000">
+                    </div>
+                </div>`;
+        }
+        updateLiveCharts();
+    }
+
+    function buildNatoliGrids() {
+        const count = parseInt(document.getElementById('n_numSets').value) || 22;
+        const uCont = document.getElementById('upperInputs');
+        const lCont = document.getElementById('lowerInputs');
+        
+        document.getElementById('upperColTitle').innerText = `Upper Punches (U1 - U${count})`;
+        document.getElementById('lowerColTitle').innerText = `Lower Punches (L1 - L${count})`;
+
+        uCont.innerHTML = ''; lCont.innerHTML = '';
+        
+        for (let i=1; i<=count; i++) {
+            uCont.innerHTML += `<div class="input-row"><label class="toggle-switch"><input type="checkbox" checked onchange="toggleRow(this, 'u', ${i}, 'updateNatoliCharts')"><span class="toggle-slider"></span><span class="label-text">U${i}</span></label><input type="number" id="u${i}" data-grp="u" data-idx="${i}" placeholder="0.00000" oninput="updateNatoliCharts()"></div>`;
+            lCont.innerHTML += `<div class="input-row"><label class="toggle-switch"><input type="checkbox" checked onchange="toggleRow(this, 'l', ${i}, 'updateNatoliCharts')"><span class="toggle-slider"></span><span class="label-text">L${i}</span></label><input type="number" id="l${i}" data-grp="l" data-idx="${i}" placeholder="0.00000" oninput="updateNatoliCharts()"></div>`;
+        }
+        updateNatoliCharts();
+    }
+
+    function buildDieGrid() {
+        const count = parseInt(document.getElementById('numDies').value) || 12;
+        const dCont = document.getElementById('dieInputs');
+        document.getElementById('dieColTitle').innerText = `Individual Dies (D1 - D${count})`;
+        dCont.innerHTML = '';
+        for (let i=1; i<=count; i++) {
+            dCont.innerHTML += `<div class="input-row" style="background:var(--bg-body);"><label class="toggle-switch" style="width:75px;"><input type="checkbox" checked onchange="toggleRow(this, 'd', ${i}, 'updateDieChart')"><span class="toggle-slider"></span><span class="label-text">D${i}</span></label><input type="number" id="d${i}" data-grp="d" data-idx="${i}" placeholder="0.00000" oninput="updateDieChart()"></div>`;
+        }
+        updateDieChart();
+    }
+
+    /* ==========================================================================
+       DATA GENERATORS (TESTING)
+       ========================================================================== */
+    function generateStage1TestData() {
+        const count = parseInt(document.getElementById('numSets').value) || 12;
+        document.getElementById('opName').value = "Joe Operator";
+        document.getElementById('punchNum').value = "PM147";
+        document.getElementById('toolId').value = "TL-088";
+        document.getElementById('batchNum').value = "19266";
+        document.getElementById('pressNum').value = "2";
+        document.getElementById('partNum').value = "3-04";
+        document.getElementById('partTol').value = "0.00200";
+        document.getElementById('assemblyTol').value = "0.00400";
+        document.getElementById('rangeSpec').value = "0.00100"; 
+
+        for (let i=1; i<=count; i++) {
+            let pEl = document.getElementById(`p${i}`);
+            let hEl = document.getElementById(`h${i}`);
+            if(pEl && !pEl.disabled) pEl.value = (0.88400 + (Math.random() * 0.00080)).toFixed(5);
+            if(hEl && !hEl.disabled) hEl.value = (5.82600 + (Math.random() * 0.00120)).toFixed(5);
+        }
+        updateLiveCharts();
+        showToast("Randomized Punch test data populated.");
+    }
+
+    function generateNatoliTestData() {
+        const count = parseInt(document.getElementById('n_numSets').value) || 22;
+        document.getElementById('opName').value = "Sarah Tech";
+        document.getElementById('punchNum').value = "Natoli-UP33";
+        document.getElementById('toolId').value = "TL-N99";
+        document.getElementById('batchNum').value = "99882";
+        document.getElementById('pressNum').value = "4";
+        document.getElementById('partNum').value = "7-02";
+        document.getElementById('partTol').value = "0.00200";
+        document.getElementById('assemblyTol').value = "0.00400";
+        document.getElementById('rangeSpec').value = "0.00100"; 
+
+        for (let i=1; i<=count; i++) {
+            let uEl = document.getElementById(`u${i}`);
+            let lEl = document.getElementById(`l${i}`);
+            if(uEl && !uEl.disabled) uEl.value = (5.25000 + (Math.random() * 0.00080)).toFixed(5);
+            if(lEl && !lEl.disabled) lEl.value = (5.25000 + (Math.random() * 0.00120)).toFixed(5);
+        }
+        updateNatoliCharts();
+        showToast("Randomized Natoli test data populated.");
+    }
+
+    function generateStage3TestData() {
+        if(activeStage1Pairs.length === 0) return showToast("Calculate Optimal Pairings first!", "error");
+        activeStage1Pairs.forEach(ref => {
+            let cmbEl = document.getElementById(`cmb${ref.hId}`);
+            if(cmbEl && !cmbEl.disabled) {
+                let variance = (Math.random() * 0.00040) - 0.00020;
+                cmbEl.value = (ref.expTotal + variance).toFixed(5);
+            }
+        });
+        showToast("Randomized Assembled measurement test data populated.");
+    }
+
+    function generateDieTestData() {
+        const count = parseInt(document.getElementById('numDies').value) || 12;
+        document.getElementById('opName').value = "Mike Inspector";
+        document.getElementById('toolId').value = "DIE-SET-8";
+        document.getElementById('rangeSpec').value = "0.00100";
+        
+        for (let i=1; i<=count; i++) {
+            let dEl = document.getElementById(`d${i}`);
+            if(dEl && !dEl.disabled) dEl.value = (1.12500 + (Math.random() * 0.00080)).toFixed(5);
+        }
+        updateDieChart();
+        showToast("Randomized Die measurement test data populated.");
+    }
+
+    /* CLEARERS */
+    function clearInputs() {
+        clearSharedMetadata();
+        document.querySelectorAll('#mod-punch input[type="text"], #mod-punch input[type="number"]:not(#numSets)').forEach(i => { if(!i.disabled) i.value = ''; });
+        document.getElementById('stage1ResultsCard').classList.add('hidden');
+        document.getElementById('stage2VerificationCard').classList.add('hidden');
+        document.getElementById('resultsDashboard').classList.add('hidden');
+        document.getElementById('optimizationAlerts').innerHTML = '';
+        activeStage1Pairs = []; latestRunRecord = null;
+        updateLiveCharts(); showToast("Punch Inputs cleared.");
+    }
+
+    function clearNatoliInputs() {
+        clearSharedMetadata();
+        document.querySelectorAll('#mod-natoli input[type="text"], #mod-natoli input[type="number"]:not(#n_numSets)').forEach(i => { if(!i.disabled) i.value = ''; });
+        document.getElementById('natoliResultsDashboard').classList.add('hidden');
+        document.getElementById('natoliOptimizationAlerts').innerHTML = '';
+        n_activePairs = []; latestRunRecord = null;
+        updateNatoliCharts(); showToast("Natoli Inputs cleared.");
+    }
+
+    function clearDieInputs() {
+        clearSharedMetadata();
+        document.querySelectorAll('#mod-dies input[data-grp="d"]').forEach(i => { if(!i.disabled) i.value = ''; });
+        document.getElementById('dieResultsCard').classList.add('hidden');
+        document.getElementById('dieOptimizationAlerts').innerHTML = '';
+        updateDieChart(); showToast("Die inputs cleared.");
+    }
+
+    /* ==========================================================================
+       CHART RENDERING (MINI CHARTS)
+       ========================================================================== */
     function updateLiveCharts() {
         let count = parseInt(document.getElementById('numSets').value) || 12;
         let pData = [], hData = [];
         for(let i=1; i<=count; i++) {
             let pEl = document.getElementById(`p${i}`);
             let hEl = document.getElementById(`h${i}`);
-            let pv = parseFloat(pEl ? pEl.value : null);
-            let hv = parseFloat(hEl ? hEl.value : null);
-            pData.push(isNaN(pv) ? null : pv);
-            hData.push(isNaN(hv) ? null : hv);
+            if(pEl && !pEl.disabled) pData.push(isNaN(parseFloat(pEl.value)) ? null : parseFloat(pEl.value));
+            if(hEl && !hEl.disabled) hData.push(isNaN(parseFloat(hEl.value)) ? null : parseFloat(hEl.value));
         }
         drawMiniChart('holderVarianceCanvas', hData, 'Holder Length Variance (Raw)', '#f59e0b', 'Holder');
         drawMiniChart('punchVarianceCanvas', pData, 'Punch Length Variance (Raw)', '#3b82f6', 'Punch');
+    }
+
+    function updateNatoliCharts() {
+        let count = parseInt(document.getElementById('n_numSets').value) || 22;
+        let uData = [], lData = [];
+        for(let i=1; i<=count; i++) {
+            let uEl = document.getElementById(`u${i}`);
+            let lEl = document.getElementById(`l${i}`);
+            if(uEl && !uEl.disabled) uData.push(isNaN(parseFloat(uEl.value)) ? null : parseFloat(uEl.value));
+            if(lEl && !lEl.disabled) lData.push(isNaN(parseFloat(lEl.value)) ? null : parseFloat(lEl.value));
+        }
+        drawMiniChart('upperVarianceCanvas', uData, 'Upper Punch Variance (Raw)', '#3b82f6', 'Upper');
+        drawMiniChart('lowerVarianceCanvas', lData, 'Lower Punch Variance (Raw)', '#f59e0b', 'Lower');
     }
 
     function updateDieChart() {
@@ -920,10 +1553,9 @@
         let dData = [];
         for(let i=1; i<=count; i++) {
             let dEl = document.getElementById(`d${i}`);
-            let dv = parseFloat(dEl ? dEl.value : null);
-            dData.push(isNaN(dv) ? null : dv);
+            if(dEl && !dEl.disabled) dData.push(isNaN(parseFloat(dEl.value)) ? null : parseFloat(dEl.value));
         }
-        drawMiniChart('dieVarianceCanvas', dData, 'Die Thickness Variance (Raw)', 'var(--text-muted)', 'Die');
+        drawMiniChart('dieVarianceCanvas', dData, 'Die Thickness Variance (Raw)', '#64748b', 'Die');
     }
 
     function drawMiniChart(canvasId, data, title, colorHex, xLabelPrefix) {
@@ -932,7 +1564,6 @@
         const ctx = canvas.getContext('2d');
         const wrapper = canvas.parentElement;
         const rect = wrapper.getBoundingClientRect();
-        
         if(rect.width === 0) return; 
 
         canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
@@ -996,13 +1627,12 @@
         }
     }
 
-    function drawDualLineChart(canvasId, targets, actuals, title) {
+    function drawDualLineChart(canvasId, targets, actuals, title, actualLabel = 'Actual (Measured)') {
         const canvas = document.getElementById(canvasId);
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
         const wrapper = canvas.parentElement;
         const rect = wrapper.getBoundingClientRect();
-        
         if(rect.width === 0) return; 
 
         canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
@@ -1010,9 +1640,9 @@
         ctx.clearRect(0,0, w, h);
 
         let validActs = actuals.filter(d => d !== null && !isNaN(d));
-        if(validActs.length === 0) return;
-
         let allPoints = [...targets, ...validActs];
+        if (allPoints.length === 0) return;
+
         let min = Math.min(...allPoints); let max = Math.max(...allPoints);
         let range = max - min;
         let padY = 50, padX = 70, padRight = 35;
@@ -1029,7 +1659,10 @@
 
         ctx.font = '500 12px sans-serif';
         ctx.fillStyle = '#94a3b8'; ctx.fillRect(w - padRight - 150, 12, 12, 12); ctx.fillText('Target (Calculated)', w - padRight - 130, 22);
-        ctx.fillStyle = 'var(--text-muted)'; ctx.fillRect(w - padRight - 250, 12, 12, 12); ctx.fillText('Actual (Measured)', w - padRight - 230, 22);
+        
+        if (actuals.length > 0) {
+            ctx.fillStyle = 'var(--text-muted)'; ctx.fillRect(w - padRight - 280, 12, 12, 12); ctx.fillText(actualLabel, w - padRight - 260, 22);
+        }
 
         ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(padX, padY); ctx.lineTo(w-padRight, padY); ctx.stroke();
@@ -1046,32 +1679,44 @@
             ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.arc(getX(i), getY(v), 4, 0, Math.PI*2); ctx.fill();
         });
 
-        ctx.strokeStyle = 'var(--text-muted)'; ctx.lineWidth = 3; ctx.beginPath();
-        let first = true;
-        for(let i=0; i<actuals.length; i++) {
-            if(actuals[i] !== null && !isNaN(actuals[i])) {
-                if(first) { ctx.moveTo(getX(i), getY(actuals[i])); first = false; }
-                else { ctx.lineTo(getX(i), getY(actuals[i])); }
+        if (actuals.length > 0) {
+            ctx.strokeStyle = 'var(--text-muted)'; ctx.lineWidth = 3; ctx.beginPath();
+            let first = true;
+            for(let i=0; i<actuals.length; i++) {
+                if(actuals[i] !== null && !isNaN(actuals[i])) {
+                    if(first) { ctx.moveTo(getX(i), getY(actuals[i])); first = false; }
+                    else { ctx.lineTo(getX(i), getY(actuals[i])); }
+                }
             }
-        }
-        ctx.stroke();
+            ctx.stroke();
 
-        ctx.textAlign = 'center';
-        for(let i=0; i<actuals.length; i++) {
-            if(actuals[i] !== null && !isNaN(actuals[i])) {
-                let dy = getY(actuals[i]);
-                let dev = Math.abs(actuals[i] - targets[i]);
-                ctx.fillStyle = dev > 0.0005 ? '#ef4444' : 'var(--text-muted)'; 
-                ctx.beginPath(); ctx.arc(getX(i), dy, 5, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(getX(i), dy, 2.5, 0, Math.PI*2); ctx.fill();
+            ctx.textAlign = 'center';
+            for(let i=0; i<actuals.length; i++) {
+                if(actuals[i] !== null && !isNaN(actuals[i])) {
+                    let dy = getY(actuals[i]);
+                    let dev = Math.abs(actuals[i] - targets[i]);
+                    ctx.fillStyle = dev > 0.0005 ? '#ef4444' : 'var(--text-muted)'; 
+                    ctx.beginPath(); ctx.arc(getX(i), dy, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(getX(i), dy, 2.5, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '500 12px sans-serif';
+                ctx.fillText(`Set ${i+1}`, getX(i), padY + plotH + 22);
             }
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '500 12px sans-serif';
-            ctx.fillText(`Set ${i+1}`, getX(i), padY + plotH + 22);
+        } else {
+            ctx.textAlign = 'center';
+            for(let i=0; i<targets.length; i++) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '500 12px sans-serif';
+                ctx.fillText(`Set ${i+1}`, getX(i), padY + plotH + 22);
+            }
         }
     }
 
-    // --- STEP 1: CALCULATE OPTIMAL PAIRINGS & OUTLIERS ---
+
+    /* ==========================================================================
+       WORKFLOW 1: PUNCH & HOLDER CALCULATION & VERIFICATION
+       ========================================================================== */
     function calculateStage1Pairings() {
         updateDateTime();
         const count = parseInt(document.getElementById('numSets').value) || 12;
@@ -1081,27 +1726,32 @@
         let pVals = [], hVals = [];
 
         for (let i=1; i<=count; i++) {
-            let p = parseFloat(document.getElementById(`p${i}`).value);
-            let h = parseFloat(document.getElementById(`h${i}`).value);
-            if (isNaN(p) || isNaN(h)) return showToast("Missing measurements in row " + i, "error");
-            punches.push({id: i, v: p});
-            holders.push({id: i, v: h});
-            pVals.push(p);
-            hVals.push(h);
+            let pEl = document.getElementById(`p${i}`);
+            let hEl = document.getElementById(`h${i}`);
+            
+            if (pEl && !pEl.disabled && hEl && !hEl.disabled) {
+                let p = parseFloat(pEl.value);
+                let h = parseFloat(hEl.value);
+                if (isNaN(p) || isNaN(h)) return showToast("Missing measurements in active rows.", "error");
+                punches.push({id: i, v: p});
+                holders.push({id: i, v: h});
+                pVals.push(p);
+                hVals.push(h);
+                let cmbRow = document.getElementById(`cmbRow${i}`);
+                if (cmbRow) cmbRow.style.display = 'flex';
+            } else {
+                let cmbRow = document.getElementById(`cmbRow${i}`);
+                if (cmbRow) cmbRow.style.display = 'none';
+            }
         }
 
-        // Detect Outliers using Median Absolute Deviation (MAD)
-        const getMedian = (arr) => {
-            const s = [...arr].sort((a,b) => a-b);
-            const mid = Math.floor(s.length / 2);
-            return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
-        };
+        if(punches.length < 2) return showToast("Need at least 2 active sets to optimize.", "error");
 
-        let pMedian = getMedian(pVals);
-        let hMedian = getMedian(hVals);
+        let pMedian = mathUtils.median(pVals);
+        let hMedian = mathUtils.median(hVals);
 
-        let pMAD = getMedian(pVals.map(v => Math.abs(v - pMedian)));
-        let hMAD = getMedian(hVals.map(v => Math.abs(v - hMedian)));
+        let pMAD = mathUtils.median(pVals.map(v => Math.abs(v - pMedian)));
+        let hMAD = mathUtils.median(hVals.map(v => Math.abs(v - hMedian)));
 
         let pThresh = Math.max(pMAD * 5, 0.003);
         let hThresh = Math.max(hMAD * 5, 0.003);
@@ -1121,12 +1771,12 @@
         let hDesc = [...holders].sort((a,b) => b.v - a.v);
 
         let worstTotals = [];
-        for (let i=0; i<count; i++) { worstTotals.push(pAsc[i].v + hAsc[i].v); }
+        for (let i=0; i<punches.length; i++) { worstTotals.push(pAsc[i].v + hAsc[i].v); }
         let worstRange = Math.max(...worstTotals) - Math.min(...worstTotals);
 
         activeStage1Pairs = [];
         let optTotals = [];
-        for (let i=0; i<count; i++) {
+        for (let i=0; i<punches.length; i++) {
             let tot = pAsc[i].v + hDesc[i].v;
             optTotals.push(tot);
             activeStage1Pairs.push({ 
@@ -1141,27 +1791,23 @@
         let diffRange = unoptRange - optRange;
         let pctRed = unoptRange > 0 ? ((diffRange / unoptRange) * 100).toFixed(1) : 0;
 
-        // Alerts Area Handling
         let alertsHtml = '';
         let hasOutliers = punchOutliers.length > 0 || holderOutliers.length > 0;
 
         if (hasOutliers) {
             let badgeHtml = '';
-            
             if (punchOutliers.length > 0) {
                 let pLabel = punchOutliers.length === 1 ? "Punch" : "Punches";
                 badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${pLabel}:</span> ` + 
                     punchOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
                     `</div>`;
             }
-            
             if (holderOutliers.length > 0) {
                 let hLabel = holderOutliers.length === 1 ? "Holder" : "Holders";
                 badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${hLabel}:</span> ` + 
                     holderOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
                     `</div>`;
             }
-
             alertsHtml += `
                 <div class="alert-banner alert-warning" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm); background: linear-gradient(to right, #fffbeb, #fef3c7);">
                     <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px; color: #b45309;">
@@ -1169,7 +1815,7 @@
                         <strong style="letter-spacing: 0.5px; text-transform: uppercase;">Extreme Outlier Detected</strong>
                     </div>
                     <div style="font-weight:500; font-size:1.05em; color: #92400e; margin-bottom: 20px; line-height: 1.6;">
-                        The following components deviate significantly from the rest of the batch. Please thoroughly verify they were not accidentally mixed in from another tool set before proceeding with assembly.
+                        The following components deviate significantly from the rest of the batch. Please thoroughly verify they were not accidentally mixed in from another tool set. You can uncheck them to exclude them from the optimization.
                     </div>
                     <div style="display:flex; flex-direction:column; gap:16px; background: rgba(255,255,255,0.6); padding: 20px; border-radius: 12px; border: 1px dashed #fcd34d;">
                         ${badgeHtml}
@@ -1223,7 +1869,6 @@
         document.getElementById('stage1ResultsCard').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // --- STEP 3: VERIFY ASSEMBLED PRESS ---
     function verifyAssembledPress() {
         const count = parseInt(document.getElementById('numSets').value) || 12;
         let aTolRaw = document.getElementById('assemblyTol').value || document.getElementById('assemblyTol').placeholder;
@@ -1235,19 +1880,24 @@
 
         let combined = []; let totals = []; let targetsForGraph = [];
         for (let i=1; i<=count; i++) {
-            let c = parseFloat(document.getElementById(`cmb${i}`).value);
-            if (isNaN(c)) return showToast(`Missing combined measurement for Station ${i}`, "error");
-            
-            let s1Ref = activeStage1Pairs.find(p => p.hId === i) || {pId: '?', pV: 0, hV: 0, expTotal: 0};
-            combined.push({ setId: i, punchId: s1Ref.pId, pVal: s1Ref.pV, hVal: s1Ref.hV, val: c });
-            totals.push(c);
-            targetsForGraph.push(s1Ref.expTotal);
+            let cmbEl = document.getElementById(`cmb${i}`);
+            if (cmbEl && !cmbEl.disabled && cmbEl.offsetParent !== null) {
+                let c = parseFloat(cmbEl.value);
+                if (isNaN(c)) return showToast(`Missing combined measurement for Station ${i}`, "error");
+                
+                let s1Ref = activeStage1Pairs.find(p => p.hId === i) || {pId: '?', pV: 0, hV: 0, expTotal: 0};
+                combined.push({ setId: i, punchId: s1Ref.pId, pVal: s1Ref.pV, hVal: s1Ref.hV, val: c });
+                totals.push(c);
+                targetsForGraph.push(s1Ref.expTotal);
+            }
         }
+        
+        if(totals.length < 2) return showToast("Need at least 2 assembled measurements.", "error");
 
-        let mean = totals.reduce((a,b)=>a+b,0) / count;
+        let mean = mathUtils.mean(totals);
         let min = Math.min(...totals); let max = Math.max(...totals);
         let range = max - min;
-        let sigma = Math.sqrt(totals.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / count);
+        let sigma = mathUtils.stdDevSample(totals);
         let isPass = range <= rSpec;
 
         let USL = mean + aTol; let LSL = mean - aTol;
@@ -1268,9 +1918,9 @@
         let swapGrid = document.getElementById('swapGrid');
         swapGrid.innerHTML = ''; let swapsFound = false;
 
-        let numSwapsToDisplay = Math.min(3, Math.floor(count / 2));
+        let numSwapsToDisplay = Math.min(3, Math.floor(totals.length / 2));
         for(let k=0; k<numSwapsToDisplay; k++) {
-            let hi = sorted[k], lo = sorted[(count - 1) - k];
+            let hi = sorted[k], lo = sorted[(totals.length - 1) - k];
             let gap = hi.val - lo.val;
             if (gap > 0.00001 && !isPass) { // Only show swaps if it actually failed
                 swapsFound = true;
@@ -1286,6 +1936,7 @@
         if(!swapsFound || isPass) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--success); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; VALIDATED IN SPEC. NO SWAPS REQUIRED.</div>`;
 
         latestRunRecord = {
+            type: 'Punch',
             date: document.getElementById('date').value,
             time: document.getElementById('time').value,
             op: document.getElementById('opName').value || document.getElementById('opName').placeholder,
@@ -1307,41 +1958,208 @@
             components: combined 
         };
         
-        appHistory.push(latestRunRecord);
-        localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
-        renderLogTable();
-        calculateGlobalStats();
-        renderSpcChart();
-
+        saveRecordToHistory(latestRunRecord);
         showToast("Run verified and stored in local audit log.", "success");
         document.getElementById('resultsDashboard').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // --- DIE VALIDATION LOGIC ---
+    /* ==========================================================================
+       WORKFLOW 2: NATOLI UPPER/LOWER OPTIMIZATION
+       ========================================================================== */
+    function calculateNatoliPairings() {
+        updateDateTime();
+        const count = parseInt(document.getElementById('n_numSets').value) || 22;
+        const rangeSpec = parseFloat(document.getElementById('rangeSpec').value) || 0.00100;
+        const aTolRaw = document.getElementById('assemblyTol').value || document.getElementById('assemblyTol').placeholder;
+        let aTol = parseFloat(aTolRaw);
+        
+        let uppers = [], lowers = [];
+        let uVals = [], lVals = [];
+
+        for (let i=1; i<=count; i++) {
+            let uEl = document.getElementById(`u${i}`);
+            let lEl = document.getElementById(`l${i}`);
+            
+            if (uEl && !uEl.disabled && lEl && !lEl.disabled) {
+                let u = parseFloat(uEl.value);
+                let l = parseFloat(lEl.value);
+                if (isNaN(u) || isNaN(l)) return showToast("Missing measurements in active Natoli rows.", "error");
+                uppers.push({id: i, v: u});
+                lowers.push({id: i, v: l});
+                uVals.push(u);
+                lVals.push(l);
+            }
+        }
+        
+        if(uppers.length < 2) return showToast("Need at least 2 active sets to optimize.", "error");
+
+        let uMedian = mathUtils.median(uVals);
+        let lMedian = mathUtils.median(lVals);
+        let uMAD = mathUtils.median(uVals.map(v => Math.abs(v - uMedian)));
+        let lMAD = mathUtils.median(lVals.map(v => Math.abs(v - lMedian)));
+
+        let uThresh = Math.max(uMAD * 5, 0.003);
+        let lThresh = Math.max(lMAD * 5, 0.003);
+
+        let upperOutliers = []; let lowerOutliers = [];
+        uppers.forEach(u => { if (Math.abs(u.v - uMedian) > uThresh) upperOutliers.push(u.id); });
+        lowers.forEach(l => { if (Math.abs(l.v - lMedian) > lThresh) lowerOutliers.push(l.id); });
+
+        // Math matching: pair Shortest Upper with Longest Lower
+        let uAsc = [...uppers].sort((a,b) => a.v - b.v);
+        let lDesc = [...lowers].sort((a,b) => b.v - a.v);
+
+        n_activePairs = [];
+        let optTotals = [];
+        let combined = [];
+        for (let i=0; i<uAsc.length; i++) {
+            let tot = uAsc[i].v + lDesc[i].v;
+            optTotals.push(tot);
+            
+            // For Natoli, Upper acts as the "Station" anchor
+            let pairObj = { 
+                uId: uAsc[i].id, uV: uAsc[i].v,
+                lId: lDesc[i].id, lV: lDesc[i].v,
+                expTotal: tot 
+            };
+            n_activePairs.push(pairObj);
+            
+            // Generate combined array for final storage
+            combined.push({ setId: uAsc[i].id, punchId: lDesc[i].id, pVal: lDesc[i].v, hVal: uAsc[i].v, val: tot });
+        }
+        n_activePairs.sort((a,b) => a.uId - b.uId);
+
+        let max = Math.max(...optTotals);
+        let min = Math.min(...optTotals);
+        let optRange = max - min;
+        let mean = mathUtils.mean(optTotals);
+        let sigma = mathUtils.stdDevSample(optTotals);
+        let isPass = optRange <= rangeSpec;
+        
+        let USL = mean + aTol; let LSL = mean - aTol;
+        let Cpk = sigma > 0 ? Math.min((USL - mean)/(3*sigma), (mean - LSL)/(3*sigma)) : 0;
+
+        let alertsHtml = '';
+        let hasOutliers = upperOutliers.length > 0 || lowerOutliers.length > 0;
+
+        if (hasOutliers) {
+            let badgeHtml = '';
+            if (upperOutliers.length > 0) {
+                let uLabel = upperOutliers.length === 1 ? "Upper" : "Uppers";
+                badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${uLabel}:</span> ` + 
+                    upperOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
+                    `</div>`;
+            }
+            if (lowerOutliers.length > 0) {
+                let lLabel = lowerOutliers.length === 1 ? "Lower" : "Lowers";
+                badgeHtml += `<div style="display:flex; align-items:center; gap:12px;"><span style="color:#92400e; font-weight:700; width:80px; text-transform:uppercase;">${lLabel}:</span> ` + 
+                    lowerOutliers.map(id => `<span style="background:#f59e0b; color:#fff; padding:6px 14px; border-radius:8px; font-weight:800; font-size:1.15em; box-shadow:0 2px 5px rgba(245,158,11,0.4);">#${id}</span>`).join(' ') + 
+                    `</div>`;
+            }
+            alertsHtml += `
+                <div class="alert-banner alert-warning" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm); background: linear-gradient(to right, #fffbeb, #fef3c7);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px; color: #b45309;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">Extreme Outlier Detected</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; color: #92400e; margin-bottom: 20px; line-height: 1.6;">
+                        The following punches deviate significantly from the rest of the batch. Please thoroughly verify them or uncheck them to exclude from optimization.
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:16px; background: rgba(255,255,255,0.6); padding: 20px; border-radius: 12px; border: 1px dashed #fcd34d;">
+                        ${badgeHtml}
+                    </div>
+                </div>`;
+        }
+        
+        if (!isPass) {
+            alertsHtml += `
+                <div class="alert-banner alert-error" style="border-left-width: 8px; padding: 28px; box-shadow: var(--shadow-sm);">
+                    <div style="display:flex; align-items:center; gap:12px; font-size: 1.3em; margin-bottom: 12px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:32px; height:32px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <strong style="letter-spacing: 0.5px; text-transform: uppercase;">CRITICAL: Set Exceeds Specifications</strong>
+                    </div>
+                    <div style="font-weight:500; font-size:1.05em; line-height: 1.6;">
+                        The optimized spread (<strong style="font-size:1.15em;">${optRange.toFixed(5)}"</strong>) exceeds your target limit of <strong style="font-size:1.15em;">${rangeSpec.toFixed(5)}"</strong>.<br>No combination of these components will pass validation. Pull the outliers or send the set for maintenance.
+                    </div>
+                </div>`;
+        }
+        document.getElementById('natoliOptimizationAlerts').innerHTML = alertsHtml;
+
+        document.getElementById('n_valRange').innerText = optRange.toFixed(5);
+        document.getElementById('n_optRange').innerText = optRange.toFixed(5);
+        document.getElementById('n_valMean').innerText = mean.toFixed(5);
+        document.getElementById('n_valSigma').innerText = sigma.toFixed(5);
+        document.getElementById('n_valStatus').innerText = isPass ? 'PASS' : 'FAIL';
+        document.getElementById('n_kpiStatusTile').className = `kpi-tile ${isPass ? 'pass' : 'fail'}`;
+
+        let grid = document.getElementById('n_pairingCardsGrid');
+        grid.innerHTML = '';
+        n_activePairs.forEach(pair => {
+            let isOutlier = upperOutliers.includes(pair.uId) || lowerOutliers.includes(pair.lId);
+            let borderOverride = isOutlier ? 'border-top-color: var(--danger); background-color: var(--danger-bg);' : '';
+
+            grid.innerHTML += `
+                <div class="pairing-card" style="${borderOverride}">
+                    <div class="station-num">Set ${pair.uId}</div>
+                    <div class="match-main">Upper ${pair.uId} <br>+ Lower ${pair.lId}</div>
+                    <div style="margin-top:12px; font-weight:600; color:var(--text-muted);">Target: <span style="color:var(--text-main);">${pair.expTotal.toFixed(5)}"</span></div>
+                </div>`;
+        });
+
+        document.getElementById('natoliResultsDashboard').classList.remove('hidden');
+        drawDualLineChart('n_actualVsTargetCanvas', optTotals, [], 'Predicted Assembly Profile (Flattened via Optimization)', 'N/A');
+
+        latestRunRecord = {
+            type: 'Natoli',
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            op: document.getElementById('opName').value || document.getElementById('opName').placeholder,
+            shift: document.getElementById('shift').value,
+            toolId: document.getElementById('toolId').value || document.getElementById('toolId').placeholder,
+            batch: document.getElementById('batchNum').value || document.getElementById('batchNum').placeholder,
+            press: document.getElementById('pressNum').value || document.getElementById('pressNum').placeholder,
+            part: document.getElementById('partNum').value || document.getElementById('partNum').placeholder,
+            numSets: count,
+            partTol: document.getElementById('partTol').value || document.getElementById('partTol').placeholder,
+            assemblyTol: aTol.toFixed(5),
+            rangeSpec: rangeSpec.toFixed(5),
+            range: optRange.toFixed(5),
+            mean: mean.toFixed(5),
+            max: max.toFixed(5), 
+            min: min.toFixed(5),
+            cpk: Cpk.toFixed(2),
+            status: isPass ? 'PASS' : 'FAIL',
+            components: combined 
+        };
+        
+        saveRecordToHistory(latestRunRecord);
+        showToast("Natoli optimal pairings generated and logged.", "success");
+        document.getElementById('natoliResultsDashboard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /* ==========================================================================
+       WORKFLOW 3: DIE VALIDATION LOGIC
+       ========================================================================== */
     function verifyDies() {
+        updateDateTime();
         const count = parseInt(document.getElementById('numDies').value) || 12;
-        const spec = parseFloat(document.getElementById('dieRangeSpec').value) || 0.00100;
+        const spec = parseFloat(document.getElementById('rangeSpec').value) || 0.00100; // Reuse global range spec
         
         let vals = [];
         for (let i=1; i<=count; i++) {
-            let v = parseFloat(document.getElementById(`d${i}`).value);
-            if (isNaN(v)) return showToast(`Missing measurement for Die ${i}`, "error");
-            vals.push({ id: i, val: v });
+            let dEl = document.getElementById(`d${i}`);
+            if (dEl && !dEl.disabled) {
+                let v = parseFloat(dEl.value);
+                if (isNaN(v)) return showToast(`Missing measurement for Die ${i}`, "error");
+                vals.push({ id: i, val: v });
+            }
         }
         
-        let numericVals = vals.map(v => v.val);
+        if (vals.length < 2) return showToast("Need at least 2 dies to measure range.", "error");
         
-        // Detect Outliers using Median Absolute Deviation (MAD)
-        const getMedian = (arr) => {
-            const s = [...arr].sort((a,b) => a-b);
-            const mid = Math.floor(s.length / 2);
-            return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
-        };
-
-        let dMedian = getMedian(numericVals);
-        let dMAD = getMedian(numericVals.map(v => Math.abs(v - dMedian)));
-
-        // Dynamic threshold: 5x MAD, with a hard floor of 0.003"
+        let numericVals = vals.map(v => v.val);
+        let dMedian = mathUtils.median(numericVals);
+        let dMAD = mathUtils.median(numericVals.map(v => Math.abs(v - dMedian)));
         let dThresh = Math.max(dMAD * 5, 0.003);
 
         let dieOutliers = [];
@@ -1350,11 +2168,15 @@
         let max = Math.max(...numericVals);
         let min = Math.min(...numericVals);
         let range = max - min;
-        let mean = numericVals.reduce((a,b) => a+b, 0) / count;
-        
+        let mean = mathUtils.mean(numericVals);
+        let sigma = mathUtils.stdDevSample(numericVals);
         let isPass = range <= spec;
+
+        let aTolRaw = document.getElementById('partTol').value || document.getElementById('partTol').placeholder;
+        let aTol = parseFloat(aTolRaw);
+        let USL = mean + aTol; let LSL = mean - aTol;
+        let Cpk = sigma > 0 ? Math.min((USL - mean)/(3*sigma), (mean - LSL)/(3*sigma)) : 0;
         
-        // Alerts Area Handling
         let alertsHtml = '';
         if (dieOutliers.length > 0) {
             let dLabel = dieOutliers.length === 1 ? "Die" : "Dies";
@@ -1410,15 +2232,498 @@
         
         document.getElementById('dieResultsCard').classList.remove('hidden');
         document.getElementById('dieResultsCard').scrollIntoView({ behavior: 'smooth' });
-        showToast("Die set validated.");
+
+        // Save Die validation to history
+        let combined = vals.map(d => ({ setId: d.id, punchId: d.id, pVal: 0, hVal: 0, val: d.val }));
+        
+        latestRunRecord = {
+            type: 'Die',
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            op: document.getElementById('opName').value || document.getElementById('opName').placeholder,
+            shift: document.getElementById('shift').value,
+            toolId: document.getElementById('toolId').value || document.getElementById('toolId').placeholder,
+            batch: document.getElementById('batchNum').value || document.getElementById('batchNum').placeholder,
+            press: document.getElementById('pressNum').value || document.getElementById('pressNum').placeholder,
+            part: document.getElementById('partNum').value || document.getElementById('partNum').placeholder,
+            numSets: count,
+            partTol: document.getElementById('partTol').value || document.getElementById('partTol').placeholder,
+            assemblyTol: "-", // N/A for dies
+            rangeSpec: spec.toFixed(5),
+            range: range.toFixed(5),
+            mean: mean.toFixed(5),
+            max: max.toFixed(5), 
+            min: min.toFixed(5),
+            cpk: Cpk.toFixed(2),
+            status: isPass ? 'PASS' : 'FAIL',
+            components: combined 
+        };
+        
+        saveRecordToHistory(latestRunRecord);
+        showToast("Die set validated and logged.", "success");
     }
 
-    // --- HISTORICAL RUN MODAL VIEWER ---
+    /* ==========================================================================
+       STORAGE & HISTORY MANAGEMENT
+       ========================================================================== */
+    function saveRecordToHistory(record) {
+        appHistory.push(record);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appHistory));
+        renderLogTable();
+        calculateGlobalStats();
+        renderSpcChart();
+    }
+
+    function loadHistoryFromStorage() {
+        try {
+            appHistory = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            renderLogTable();
+            calculateGlobalStats();
+            renderSpcChart();
+        } catch (err) {
+            console.warn("Storage load error:", err.message);
+        }
+    }
+
+    function clearHistory() {
+        if(confirm("Permanently delete all local historical audit logs? This cannot be undone unless you have a JSON backup.")) {
+            appHistory = [];
+            localStorage.removeItem(STORAGE_KEY);
+            renderLogTable();
+            renderSpcChart();
+            calculateGlobalStats();
+            showToast("Local History Cleared.", "info");
+        }
+    }
+
+    /* ==========================================================================
+       ADVANCED SPC CHART DASHBOARD (X-BAR & R)
+       ========================================================================== */
+    function calculateGlobalStats() {
+        let filterType = document.getElementById('spcFilterType').value;
+        let dataToUse = appHistory;
+        if(filterType !== 'ALL') {
+            dataToUse = appHistory.filter(r => r.type === filterType);
+        }
+
+        if(dataToUse.length === 0) {
+            document.getElementById('gCp').innerText = '-';
+            document.getElementById('gCpk').innerText = '-';
+            document.getElementById('gPp').innerText = '-';
+            document.getElementById('gPpk').innerText = '-';
+            document.getElementById('gRange').innerText = '-';
+            document.getElementById('gTotal').innerText = '0';
+            return;
+        }
+
+        let means = dataToUse.map(r => parseFloat(r.mean));
+        let ranges = dataToUse.map(r => parseFloat(r.range));
+        let grandMean = mathUtils.mean(means);
+        let avgRange = mathUtils.mean(ranges);
+        
+        let sumVars = 0;
+        dataToUse.forEach(r => {
+            let n = parseInt(r.numSets) || 12;
+            let d2 = getSpcConst(n, D2_TABLE);
+            sumVars += Math.pow(parseFloat(r.range) / d2, 2);
+        });
+        
+        let globalSigmaWithin = Math.sqrt(sumVars / dataToUse.length); // Sigma within (for Cp/Cpk)
+        let globalSigmaOverall = mathUtils.stdDevSample(means); // Sigma overall (for Pp/Ppk)
+        
+        let rLast = dataToUse[dataToUse.length-1];
+        let aTol = parseFloat(rLast.assemblyTol) || parseFloat(rLast.partTol);
+        if(isNaN(aTol)) aTol = 0.002;
+        let USL = grandMean + aTol;
+        let LSL = grandMean - aTol;
+
+        // Capability (Within)
+        let gCp = globalSigmaWithin > 0 ? (USL - LSL) / (6 * globalSigmaWithin) : 0;
+        let gCpk = globalSigmaWithin > 0 ? Math.min((USL - grandMean)/(3*globalSigmaWithin), (grandMean - LSL)/(3*globalSigmaWithin)) : 0;
+
+        // Performance (Overall)
+        let gPp = globalSigmaOverall > 0 ? (USL - LSL) / (6 * globalSigmaOverall) : 0;
+        let gPpk = globalSigmaOverall > 0 ? Math.min((USL - grandMean)/(3*globalSigmaOverall), (grandMean - LSL)/(3*globalSigmaOverall)) : 0;
+
+        document.getElementById('gCp').innerText = gCp.toFixed(2);
+        document.getElementById('gCpk').innerText = gCpk.toFixed(2);
+        document.getElementById('gPp').innerText = gPp.toFixed(2);
+        document.getElementById('gPpk').innerText = gPpk.toFixed(2);
+        document.getElementById('gRange').innerText = avgRange.toFixed(5);
+        document.getElementById('gTotal').innerText = dataToUse.length;
+    }
+
+    function renderSpcChart() {
+        renderXBarChart();
+        renderRChart();
+    }
+
+    function evalWesternElectricRules(dataPoints, mean, sigma) {
+        let violations = [];
+        // Extract values
+        let y = dataPoints.map(p => p.val);
+        
+        for (let i=0; i<y.length; i++) {
+            let val = y[i];
+            let vObj = { index: i, rules: [] };
+            
+            // Rule 1: 1 point > 3 sigma from center line
+            if (Math.abs(val - mean) > 3*sigma) {
+                vObj.rules.push("Rule 1: Point > 3σ from mean");
+            }
+            
+            // Rule 2: 9 points in a row on same side of center line
+            if (i >= 8) {
+                let side = y[i] > mean ? 1 : -1;
+                let match = true;
+                for (let j=0; j<9; j++) {
+                    let currentSide = y[i-j] > mean ? 1 : -1;
+                    if (currentSide !== side) { match = false; break; }
+                }
+                if (match) vObj.rules.push("Rule 2: 9 points on same side of mean");
+            }
+            
+            // Rule 3: 6 points in a row steadily increasing or decreasing
+            if (i >= 5) {
+                let inc = true; let dec = true;
+                for (let j=0; j<5; j++) {
+                    if (y[i-j] <= y[i-j-1]) inc = false;
+                    if (y[i-j] >= y[i-j-1]) dec = false;
+                }
+                if (inc || dec) vObj.rules.push("Rule 3: 6 points steadily trending");
+            }
+            
+            // Rule 4: 14 points alternating up and down
+            if (i >= 13) {
+                let alt = true;
+                for (let j=0; j<13; j++) {
+                    let dir1 = y[i-j] > y[i-j-1];
+                    let dir2 = y[i-j-1] > y[i-j-2];
+                    if (dir1 === dir2) { alt = false; break; }
+                }
+                if (alt) vObj.rules.push("Rule 4: 14 points alternating up/down");
+            }
+
+            if (vObj.rules.length > 0) violations.push(vObj);
+        }
+        return violations;
+    }
+
+    function renderXBarChart() {
+        const canvas = document.getElementById('spcCanvasX');
+        const ctx = canvas.getContext('2d');
+        const wrapper = canvas.parentElement;
+        const rect = wrapper.getBoundingClientRect();
+        
+        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
+        const w = rect.width; const h = rect.height;
+        ctx.clearRect(0,0, w, h);
+
+        let filterType = document.getElementById('spcFilterType').value;
+        let dataToUse = appHistory;
+        if(filterType !== 'ALL') dataToUse = appHistory.filter(r => r.type === filterType);
+
+        if(dataToUse.length === 0) {
+            ctx.fillStyle = '#64748b'; ctx.font = '500 16px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('No history data matches filter. Complete runs to populate X-Bar chart.', w/2, h/2);
+            return;
+        }
+
+        let padX = 75, padY = 30, padBot = 40;
+        let plotW = w - padX*2, plotH = h - padY - padBot;
+        
+        let means = dataToUse.map(r => parseFloat(r.mean));
+        let grandMean = mathUtils.mean(means);
+        
+        // Calculate dynamic A2 based on average n
+        let avgN = Math.round(mathUtils.mean(dataToUse.map(r => parseInt(r.numSets)||12)));
+        let a2 = getSpcConst(avgN, A2_TABLE);
+        let avgRange = mathUtils.mean(dataToUse.map(r => parseFloat(r.range)));
+        
+        let sigmaAppx = avgRange / getSpcConst(avgN, D2_TABLE); // Approx population sigma
+
+        let UCL = grandMean + (3 * sigmaAppx); // Control Limits (Statistical)
+        let LCL = grandMean - (3 * sigmaAppx);
+        
+        let sig1U = grandMean + (1 * sigmaAppx);
+        let sig1L = grandMean - (1 * sigmaAppx);
+        let sig2U = grandMean + (2 * sigmaAppx);
+        let sig2L = grandMean - (2 * sigmaAppx);
+
+        let yTop = UCL + (sigmaAppx * 2);
+        let yBot = LCL - (sigmaAppx * 2);
+
+        // Ensure bounds don't break if variance is 0
+        if (yTop === yBot) { yTop += 0.001; yBot -= 0.001; }
+
+        const getX = i => padX + (i * (plotW / Math.max(1, dataToUse.length-1)));
+        const getY = v => padY + plotH - (((v - yBot) / (yTop - yBot)) * plotH);
+
+        // Draw zones
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.05)'; // Red outside 3s
+        ctx.fillRect(padX, padY, plotW, getY(UCL) - padY); 
+        ctx.fillRect(padX, getY(LCL), plotW, plotH - (getY(LCL) - padY)); 
+        
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.05)'; // Orange 2s-3s
+        ctx.fillRect(padX, getY(UCL), plotW, getY(sig2U) - getY(UCL)); 
+        ctx.fillRect(padX, getY(sig2L), plotW, getY(LCL) - getY(sig2L)); 
+
+        ctx.fillStyle = 'rgba(61, 205, 88, 0.05)'; // Green 0-1s
+        ctx.fillRect(padX, getY(sig1U), plotW, getY(sig1L) - getY(sig1U));
+
+        // Grid lines
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.beginPath();
+        for(let i=0; i<=6; i++) {
+            let v = yTop - (i*(yTop-yBot)/6); let y = getY(v);
+            ctx.moveTo(padX, y); ctx.lineTo(w-padX, y);
+        }
+        ctx.stroke();
+
+        // Control lines
+        const drawLine = (val, color, dash, text) => {
+            let y = getY(val);
+            ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash(dash);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
+            ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.font = '600 11px sans-serif';
+            ctx.fillText(text + ': ' + val.toFixed(4), w - padX + 8, y+4);
+        };
+        
+        drawLine(UCL, 'var(--spc-ucl)', [4,4], 'UCL (+3σ)');
+        drawLine(LCL, 'var(--spc-lcl)', [4,4], 'LCL (-3σ)');
+        drawLine(sig2U, 'var(--spc-sigma2)', [2,4], '+2σ');
+        drawLine(sig2L, 'var(--spc-sigma2)', [2,4], '-2σ');
+        drawLine(sig1U, 'var(--spc-sigma1)', [2,4], '+1σ');
+        drawLine(sig1L, 'var(--spc-sigma1)', [2,4], '-1σ');
+        drawLine(grandMean, 'var(--spc-center)', [], 'X-Bar');
+        
+        ctx.setLineDash([]);
+
+        // Line Plot
+        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2.5; ctx.beginPath();
+        dataToUse.forEach((r, i) => i===0 ? ctx.moveTo(getX(i), getY(parseFloat(r.mean))) : ctx.lineTo(getX(i), getY(parseFloat(r.mean))));
+        ctx.stroke();
+
+        // Western Electric Evaluation
+        let points = dataToUse.map((r, i) => ({ x: getX(i), y: getY(parseFloat(r.mean)), val: parseFloat(r.mean), data: r }));
+        let violations = evalWesternElectricRules(points, grandMean, sigmaAppx);
+
+        spcRenderDataX = []; 
+        points.forEach((p, i) => {
+            let vRecord = violations.find(v => v.index === i);
+            let isViol = !!vRecord;
+
+            // Draw Point
+            ctx.fillStyle = isViol ? 'var(--danger)' : '#0f172a';
+            let radius = isViol ? 7 : 5;
+            ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = isViol ? 2 : 1.5; ctx.stroke();
+            
+            // X-Axis Date label
+            ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.font = '600 10px sans-serif';
+            let dStr = p.data.date.split('/')[0] + '/' + p.data.date.split('/')[1];
+            // Stagger labels if tight
+            let yOff = (i%2===0) ? h - 20 : h - 8;
+            if (points.length < 20) yOff = h - 14; 
+            ctx.fillText(dStr, p.x, yOff);
+
+            spcRenderDataX.push({ x: p.x, y: p.y, data: p.data, runIdx: i+1, violation: vRecord });
+        });
+
+        // Hover Logic
+        canvas.onmousemove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left);
+            const tooltip = document.getElementById('spc-tooltip');
+            
+            let closest = null; let minDx = Infinity;
+            for(let slice of spcRenderDataX) {
+                let dx = Math.abs(slice.x - mouseX);
+                if(dx < minDx && dx < (plotW/Math.max(1, spcRenderDataX.length))) { minDx = dx; closest = slice; }
+            }
+
+            if(closest && minDx < 30) {
+                let r = closest.data;
+                let violHtml = '';
+                if (closest.violation) {
+                    closest.violation.rules.forEach(rule => {
+                        violHtml += `<div class="we-rule-alert">${rule}</div>`;
+                    });
+                }
+                
+                let badge = r.type === 'Die' ? `<span style="background:var(--text-muted); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.8em;">Die</span>` : '';
+                if(r.type==='Natoli') badge = `<span style="background:var(--info); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.8em;">Natoli</span>`;
+                if(r.type==='Punch') badge = `<span style="background:var(--primary); color:#fff; padding:2px 6px; border-radius:4px; font-size:0.8em;">Punch</span>`;
+
+                tooltip.innerHTML = `
+                    <div class="tt-head">Run #${closest.runIdx} - ${r.date} ${r.time} ${badge}</div>
+                    <div class="tt-row"><span>Operator:</span> <span class="val">${r.op}</span></div>
+                    <div class="tt-row"><span>Tool ID:</span> <span class="val">${r.toolId || 'N/A'}</span></div>
+                    <div class="tt-row"><span>Batch:</span> <span class="val">${r.batch}</span></div>
+                    <div class="tt-row" style="margin-top:10px;"><span>Mean Height:</span> <span class="val" style="color:var(--text-main)">${r.mean}"</span></div>
+                    <div class="tt-row"><span>Max Height:</span> <span class="val" style="color:var(--text-muted)">${r.max}"</span></div>
+                    <div class="tt-row"><span>Min Height:</span> <span class="val" style="color:var(--text-muted)">${r.min}"</span></div>
+                    ${violHtml}
+                `;
+                tooltip.style.opacity = '1';
+                
+                let ttX = e.clientX + 20; let ttY = e.clientY + 20;
+                if (ttX + 300 > window.innerWidth) ttX = e.clientX - 310;
+                if (ttY + 240 > window.innerHeight) ttY = e.clientY - 250;
+                
+                tooltip.style.left = ttX + 'px';
+                tooltip.style.top = ttY + 'px';
+            } else {
+                tooltip.style.opacity = '0';
+            }
+        };
+        canvas.onmouseleave = () => { document.getElementById('spc-tooltip').style.opacity = '0'; };
+    }
+
+    function renderRChart() {
+        const canvas = document.getElementById('spcCanvasR');
+        const ctx = canvas.getContext('2d');
+        const wrapper = canvas.parentElement;
+        const rect = wrapper.getBoundingClientRect();
+        
+        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
+        const w = rect.width; const h = rect.height;
+        ctx.clearRect(0,0, w, h);
+
+        let filterType = document.getElementById('spcFilterType').value;
+        let dataToUse = appHistory;
+        if(filterType !== 'ALL') dataToUse = appHistory.filter(r => r.type === filterType);
+
+        if(dataToUse.length === 0) return;
+
+        let padX = 75, padY = 30, padBot = 40;
+        let plotW = w - padX*2, plotH = h - padY - padBot;
+        
+        let ranges = dataToUse.map(r => parseFloat(r.range));
+        let rBar = mathUtils.mean(ranges);
+        
+        let avgN = Math.round(mathUtils.mean(dataToUse.map(r => parseInt(r.numSets)||12)));
+        let d4 = getSpcConst(avgN, D4_TABLE);
+        let d3 = getSpcConst(avgN, D3_TABLE);
+        
+        let UCL_R = d4 * rBar;
+        let LCL_R = Math.max(0, d3 * rBar); 
+
+        let yTop = UCL_R * 1.2;
+        let yBot = 0; // Ranges can't be negative
+
+        const getX = i => padX + (i * (plotW / Math.max(1, dataToUse.length-1)));
+        const getY = v => padY + plotH - (((v - yBot) / (yTop - yBot)) * plotH);
+
+        // Control lines
+        const drawLine = (val, color, dash, text) => {
+            let y = getY(val);
+            ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash(dash);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
+            ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.font = '600 11px sans-serif';
+            ctx.fillText(text + ': ' + val.toFixed(4), w - padX + 8, y+4);
+        };
+        
+        drawLine(UCL_R, 'var(--spc-ucl)', [4,4], 'UCL (R)');
+        drawLine(LCL_R, 'var(--spc-lcl)', [4,4], 'LCL (R)');
+        drawLine(rBar, 'var(--spc-center)', [], 'R-Bar');
+        
+        ctx.setLineDash([]);
+
+        // Line Plot
+        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath();
+        ranges.forEach((r, i) => i===0 ? ctx.moveTo(getX(i), getY(r)) : ctx.lineTo(getX(i), getY(r)));
+        ctx.stroke();
+
+        spcRenderDataR = [];
+        ranges.forEach((r, i) => {
+            let x = getX(i); let y = getY(r);
+            let isViol = (r > UCL_R || r < LCL_R);
+
+            ctx.fillStyle = isViol ? 'var(--danger)' : '#3b82f6';
+            ctx.beginPath(); ctx.arc(x, y, isViol?6:4, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+            // X-Axis Date label
+            ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.font = '600 10px sans-serif';
+            let dStr = dataToUse[i].date.split('/')[0] + '/' + dataToUse[i].date.split('/')[1];
+            let yOff = (i%2===0) ? h - 20 : h - 8;
+            if (ranges.length < 20) yOff = h - 14; 
+            ctx.fillText(dStr, x, yOff);
+
+            spcRenderDataR.push({ x: x, y: y, data: dataToUse[i], runIdx: i+1, violation: isViol });
+        });
+
+        // Hover Logic R Chart
+        canvas.onmousemove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left);
+            const tooltip = document.getElementById('r-tooltip');
+            
+            let closest = null; let minDx = Infinity;
+            for(let slice of spcRenderDataR) {
+                let dx = Math.abs(slice.x - mouseX);
+                if(dx < minDx && dx < (plotW/Math.max(1, spcRenderDataR.length))) { minDx = dx; closest = slice; }
+            }
+
+            if(closest && minDx < 30) {
+                let r = closest.data;
+                let violHtml = closest.violation ? `<div class="we-rule-alert">Rule 1: Point Outside Control Limits</div>` : '';
+                
+                tooltip.innerHTML = `
+                    <div class="tt-head">Range (R) Run #${closest.runIdx} - ${r.date}</div>
+                    <div class="tt-row"><span>Measured Range:</span> <span class="val" style="color:var(--info)">${r.range}"</span></div>
+                    <div class="tt-row"><span>R-Bar (Avg Range):</span> <span class="val" style="color:var(--text-main)">${rBar.toFixed(5)}"</span></div>
+                    ${violHtml}
+                `;
+                tooltip.style.opacity = '1';
+                
+                let ttX = e.clientX + 20; let ttY = e.clientY + 20;
+                if (ttX + 300 > window.innerWidth) ttX = e.clientX - 310;
+                if (ttY + 240 > window.innerHeight) ttY = e.clientY - 250;
+                
+                tooltip.style.left = ttX + 'px';
+                tooltip.style.top = ttY + 'px';
+            } else {
+                tooltip.style.opacity = '0';
+            }
+        };
+        canvas.onmouseleave = () => { document.getElementById('r-tooltip').style.opacity = '0'; };
+    }
+
+    /* ==========================================================================
+       AUDIT LOG, EXPORTS & JSON MANAGEMENT
+       ========================================================================== */
+    function renderLogTable() {
+        let t = document.getElementById('logBody'); t.innerHTML = '';
+        let reversed = appHistory.slice().reverse();
+        reversed.forEach((r, i) => {
+            let origIndex = appHistory.length - 1 - i;
+            let typeBadge = '';
+            if(r.type === 'Die') typeBadge = `<span style="background:var(--text-muted); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.85em; font-weight:700;">DIE</span>`;
+            else if(r.type === 'Natoli') typeBadge = `<span style="background:var(--info); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.85em; font-weight:700;">NATOLI</span>`;
+            else typeBadge = `<span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.85em; font-weight:700;">PUNCH</span>`;
+
+            t.innerHTML += `<tr class="clickable-row" onclick="viewHistoryRun(${origIndex})" title="Click to view full dashboard">
+                <td>${r.date} ${r.time}</td>
+                <td>${typeBadge}</td>
+                <td>${r.op}</td>
+                <td>${r.toolId || '-'}</td>
+                <td>${r.batch}</td>
+                <td style="font-weight: 700;">${r.range}</td>
+                <td style="font-weight: 600;">${r.mean}</td>
+                <td style="font-weight: 600;">${r.cpk}</td>
+                <td style="color:${r.status==='PASS'?'var(--success)':'var(--danger)'}; font-weight:800;">${r.status}</td>
+            </tr>`;
+        });
+    }
+
     function viewHistoryRun(origIndex) {
         let r = appHistory[origIndex];
         if(!r) return;
 
         document.getElementById('modTitle').innerText = `(${r.date} ${r.time})`;
+        document.getElementById('modTypeBadge').innerText = (r.type || 'PUNCH').toUpperCase();
+        
         let bigStat = document.getElementById('modBigStatus');
         bigStat.innerText = r.status;
         bigStat.style.backgroundColor = r.status === 'PASS' ? 'var(--success)' : 'var(--danger)';
@@ -1439,305 +2744,112 @@
         document.getElementById('modSpec').innerText = r.rangeSpec;
         document.getElementById('modNumSets').innerText = r.numSets || 12;
 
+        let tableHead = document.getElementById('modMeasurementHead');
         let tableBody = document.getElementById('modMeasurementBody');
         tableBody.innerHTML = '';
-        if(r.components && r.components.length > 0) {
-            r.components.forEach(c => {
-                let target = parseFloat(c.pVal) + parseFloat(c.hVal);
-                let actual = parseFloat(c.val);
-                let diff = actual - target;
-                
-                let isBad = Math.abs(diff) > 0.0005;
-                let diffStyle = isBad 
-                    ? 'background: var(--danger-faint); color: var(--danger); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--danger-border);' 
-                    : 'background: var(--bg-body); color: var(--text-main); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);';
+        
+        let pDataRaw = []; let hDataRaw = [];
+        let targets = []; let actuals = [];
+        let count = r.numSets || 12;
+        for(let i=0; i<count; i++) { pDataRaw.push(null); hDataRaw.push(null); }
 
-                tableBody.innerHTML += `
-                    <tr>
-                        <td style="font-weight: 700; font-size: 1.15em; color: var(--text-main);">Set ${c.setId}</td>
-                        <td><span style="background: var(--bg-body); padding: 8px 20px; border-radius: 8px; font-weight: 600; font-size: 1.05em; border: 2px solid var(--border); color: var(--text-main);">Holder ${c.setId} + Punch ${c.punchId}</span></td>
-                        <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${parseFloat(c.pVal).toFixed(5)}"</td>
-                        <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${parseFloat(c.hVal).toFixed(5)}"</td>
-                        <td style="color: var(--text-muted); font-weight: 600; font-size: 1.05em;">${target.toFixed(5)}"</td>
-                        <td style="font-weight: 700; font-size: 1.2em;">${actual.toFixed(5)}"</td>
-                        <td><span style="${diffStyle}; font-weight: 700; font-size: 1.1em;">${diff > 0 ? '+' : ''}${diff.toFixed(5)}"</span></td>
-                    </tr>
-                `;
-            });
+        if(r.type === 'Die') {
+            document.getElementById('modChartArea').style.display = 'none';
+            document.getElementById('modDualChartArea').style.display = 'none';
+            document.getElementById('modSwapGridContainer').style.display = 'none';
+            document.getElementById('modTableTitle').innerText = 'Individual Die Thickness Measurements';
+            tableHead.innerHTML = `<tr><th>Die Station</th><th>Measured Thickness</th><th>Deviation from Mean</th></tr>`;
+            
+            if(r.components && r.components.length > 0) {
+                let mean = parseFloat(r.mean);
+                r.components.forEach(c => {
+                    let actual = parseFloat(c.val);
+                    let diff = actual - mean;
+                    let isBad = Math.abs(diff) > 0.0005;
+                    let diffStyle = isBad ? 'background: var(--danger-faint); color: var(--danger);' : '';
+                    
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:700;">Die ${c.setId}</td>
+                            <td style="font-weight:700;">${actual.toFixed(5)}"</td>
+                            <td><span style="padding:6px 12px; border-radius:6px; ${diffStyle}">${diff > 0 ? '+':''}${diff.toFixed(5)}"</span></td>
+                        </tr>`;
+                });
+            }
         } else {
-            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding: 32px; font-weight: 500;">No measurement data available for this older run.</td></tr>`;
+            // Punch or Natoli
+            document.getElementById('modChartArea').style.display = 'flex';
+            document.getElementById('modDualChartArea').style.display = 'block';
+            document.getElementById('modSwapGridContainer').style.display = 'block';
+            document.getElementById('modTableTitle').innerText = 'Station-by-Station Pairings & Measurements';
+            
+            let labelA = r.type === 'Natoli' ? 'Upper' : 'Holder';
+            let labelB = r.type === 'Natoli' ? 'Lower' : 'Punch';
+
+            tableHead.innerHTML = `<tr><th>Station</th><th>Optimized Pairing</th><th>${labelA} Length</th><th>${labelB} Length</th><th>Target Height</th><th>Actual Height</th><th>Deviation</th></tr>`;
+
+            if(r.components && r.components.length > 0) {
+                r.components.forEach(c => {
+                    let target = parseFloat(c.pVal) + parseFloat(c.hVal);
+                    let actual = parseFloat(c.val);
+                    let diff = actual - target;
+                    let isBad = Math.abs(diff) > 0.0005;
+                    let diffStyle = isBad ? 'background: var(--danger-bg); color: var(--danger);' : '';
+
+                    let hIndex = parseInt(c.setId) - 1;
+                    let pIndex = parseInt(c.punchId) - 1;
+                    if(hIndex >= 0 && hIndex < count) hDataRaw[hIndex] = parseFloat(c.hVal);
+                    if(pIndex >= 0 && pIndex < count) pDataRaw[pIndex] = parseFloat(c.pVal);
+
+                    targets.push(target);
+                    actuals.push(actual);
+
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: 700;">Set ${c.setId}</td>
+                            <td><span style="background:var(--bg-body); padding:6px 12px; border-radius:6px; font-weight:600; border:1px solid var(--border);">${labelA} ${c.setId} + ${labelB} ${c.punchId}</span></td>
+                            <td style="color:var(--text-muted); font-weight:600;">${parseFloat(c.hVal).toFixed(5)}"</td>
+                            <td style="color:var(--text-muted); font-weight:600;">${parseFloat(c.pVal).toFixed(5)}"</td>
+                            <td style="color:var(--text-muted); font-weight:600;">${target.toFixed(5)}"</td>
+                            <td style="font-weight:700;">${actual.toFixed(5)}"</td>
+                            <td><span style="padding:6px 12px; border-radius:6px; ${diffStyle}; font-weight:700;">${diff > 0 ? '+':''}${diff.toFixed(5)}"</span></td>
+                        </tr>`;
+                });
+            }
+
+            drawMiniChart('modHolderVarianceCanvas', hDataRaw, `${labelA} Variance (Raw)`, '#f59e0b', labelA);
+            drawMiniChart('modPunchVarianceCanvas', pDataRaw, `${labelB} Variance (Raw)`, '#3b82f6', labelB);
+            drawDualLineChart('modChartCanvas', targets, actuals, 'Target Assembly Height vs. Actual Measured Height');
+
+            let swapGrid = document.getElementById('modSwapGrid');
+            swapGrid.innerHTML = '';
+            if(r.components && r.components.length > 0) {
+                let sorted = [...r.components].sort((a,b) => b.val - a.val);
+                let swapsFound = false;
+                let numSwapsToDisplay = Math.min(3, Math.floor(count / 2));
+                for(let k=0; k<numSwapsToDisplay; k++) {
+                    let hi = sorted[k], lo = sorted[(count - 1) - k];
+                    let gap = hi.val - lo.val;
+                    if (gap > 0.00001 && r.status !== 'PASS') {
+                        swapsFound = true;
+                        swapGrid.innerHTML += `
+                            <div class="swap-card">
+                                <div class="swap-node"><span class="swap-badge">SET ${hi.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:600;">${labelB} ${hi.punchId}</span></div>
+                                <div class="swap-arrow">&#10142;</div>
+                                <div class="swap-node"><span class="swap-badge">SET ${lo.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:600;">${labelB} ${lo.punchId}</span></div>
+                                <div class="swap-meta"><span class="lbl">Measured Gap</span><span class="gap">${gap.toFixed(5)}"</span></div>
+                            </div>`;
+                    }
+                }
+                if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--text-main); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; NO SWAPS REQUIRED / WITHIN SPEC.</div>`;
+            }
         }
 
         document.getElementById('historyModal').classList.remove('hidden');
-
-        let pDataRaw = [];
-        let hDataRaw = [];
-        let count = r.numSets || 12;
-        
-        for(let i=0; i<count; i++) {
-            pDataRaw.push(null);
-            hDataRaw.push(null);
-        }
-
-        if(r.components && r.components.length > 0) {
-            r.components.forEach(c => {
-                let hIndex = parseInt(c.setId) - 1;
-                let pIndex = parseInt(c.punchId) - 1;
-                
-                if(hIndex >= 0 && hIndex < count) hDataRaw[hIndex] = parseFloat(c.hVal);
-                if(pIndex >= 0 && pIndex < count) pDataRaw[pIndex] = parseFloat(c.pVal);
-            });
-        }
-
-        drawMiniChart('modHolderVarianceCanvas', hDataRaw, 'Holder Length Variance (Raw)', '#f59e0b', 'Holder');
-        drawMiniChart('modPunchVarianceCanvas', pDataRaw, 'Punch Length Variance (Raw)', '#3b82f6', 'Punch');
-
-        let targets = [];
-        let actuals = [];
-        if(r.components && r.components.length > 0) {
-            r.components.forEach(c => {
-                targets.push(parseFloat(c.pVal) + parseFloat(c.hVal));
-                actuals.push(parseFloat(c.val));
-            });
-        }
-        drawDualLineChart('modChartCanvas', targets, actuals, 'Target Assembly Height vs. Actual Measured Height');
-
-        let swapGrid = document.getElementById('modSwapGrid');
-        swapGrid.innerHTML = '';
-        if(r.components && r.components.length > 0) {
-            let sorted = [...r.components].sort((a,b) => b.val - a.val);
-            let swapsFound = false;
-            let numSwapsToDisplay = Math.min(3, Math.floor(count / 2));
-            for(let k=0; k<numSwapsToDisplay; k++) {
-                let hi = sorted[k], lo = sorted[(count - 1) - k];
-                let gap = hi.val - lo.val;
-                if (gap > 0.00001) {
-                    swapsFound = true;
-                    swapGrid.innerHTML += `
-                        <div class="swap-card">
-                            <div class="swap-node"><span class="swap-badge">SET ${hi.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:600;">Punch ${hi.punchId}</span></div>
-                            <div class="swap-arrow">&#10142;</div>
-                            <div class="swap-node"><span class="swap-badge">SET ${lo.setId}</span><span style="font-size:0.9em; color:var(--text-muted); font-weight:600;">Punch ${lo.punchId}</span></div>
-                            <div class="swap-meta"><span class="lbl">Measured Gap</span><span class="gap">${gap.toFixed(5)}"</span></div>
-                        </div>`;
-                }
-            }
-            if(!swapsFound) swapGrid.innerHTML = `<div class="card" style="margin:0; width:100%; border:1px solid var(--border); color:var(--text-main); font-weight:700; font-size:1.15em; box-shadow:none; text-align:center; padding: 32px;">&#10004; FULLY OPTIMIZED. NO SWAPS REQUIRED.</div>`;
-        } else {
-            swapGrid.innerHTML = `<div style="text-align:center; padding: 32px; color: var(--text-muted); font-weight: 500;">No component data available for this older run.</div>`;
-        }
     }
 
-    function closeModal() {
-        document.getElementById('historyModal').classList.add('hidden');
-    }
-
-    window.addEventListener('click', function(e) {
-        let modal = document.getElementById('historyModal');
-        if (e.target === modal) closeModal();
-    });
-
-    // --- SPC SCATTER/LINE CONTROL CHART ---
-    function calculateGlobalStats() {
-        if(appHistory.length === 0) return;
-        let means = appHistory.map(r => parseFloat(r.mean));
-        let grandMean = means.reduce((a,b)=>a+b,0) / means.length;
-        
-        let sumVars = 0;
-        let validRuns = 0;
-        let totalRanges = 0;
-        
-        appHistory.forEach(r => {
-            let n = parseInt(r.numSets) || 12;
-            let d2 = getD2(n);
-            let R = parseFloat(r.range);
-            totalRanges += R;
-            let runVar = Math.pow(R / d2, 2);
-            sumVars += runVar;
-            validRuns++;
-        });
-        
-        let avgRange = validRuns > 0 ? totalRanges / validRuns : 0;
-        let globalSigma = validRuns > 0 ? Math.sqrt(sumVars / validRuns) : 0;
-        
-        let aTol = parseFloat(appHistory[appHistory.length-1].assemblyTol || appHistory[appHistory.length-1].partTol);
-        let USL = grandMean + aTol;
-        let LSL = grandMean - aTol;
-
-        let gCp = globalSigma > 0 ? (USL - LSL) / (6 * globalSigma) : 0;
-        let gCpk = globalSigma > 0 ? Math.min((USL - grandMean)/(3*globalSigma), (grandMean - LSL)/(3*globalSigma)) : 0;
-
-        document.getElementById('gCp').innerText = gCp.toFixed(2);
-        document.getElementById('gCpk').innerText = gCpk.toFixed(2);
-        document.getElementById('gRange').innerText = avgRange.toFixed(5);
-        document.getElementById('gTotal').innerText = appHistory.length;
-    }
-
-    function renderSpcChart() {
-        const canvas = document.getElementById('spcCanvas');
-        const ctx = canvas.getContext('2d');
-        const wrapper = canvas.parentElement;
-        const rect = wrapper.getBoundingClientRect();
-        
-        canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2);
-        const w = rect.width; const h = rect.height;
-        ctx.clearRect(0,0, w, h);
-
-        if(appHistory.length === 0) {
-            ctx.fillStyle = '#64748b'; ctx.font = '500 16px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('No history data. Complete runs in Tab 1 to populate chart.', w/2, h/2);
-            return;
-        }
-
-        let padX = 75, padY = 50;
-        let plotW = w - padX*2, plotH = h - padY*2;
-        
-        let allMins = appHistory.map(r => parseFloat(r.min));
-        let allMaxs = appHistory.map(r => parseFloat(r.max));
-        let globalMin = Math.min(...allMins);
-        let globalMax = Math.max(...allMaxs);
-        
-        let means = appHistory.map(r => parseFloat(r.mean));
-        let grandMean = means.reduce((a,b)=>a+b,0) / means.length;
-
-        let yTop = globalMax + 0.0005;
-        let yBot = globalMin - 0.0005;
-
-        const getX = i => padX + (i * (plotW / Math.max(1, appHistory.length-1)));
-        const getY = v => padY + plotH - (((v - yBot) / (yTop - yBot)) * plotH);
-
-        let zGreenTop = getY(grandMean + 0.0005);
-        let zGreenBot = getY(grandMean - 0.0005);
-        ctx.fillStyle = 'rgba(61, 205, 88, 0.1)';
-        ctx.fillRect(padX, zGreenTop, plotW, zGreenBot - zGreenTop);
-
-        let avgRange = appHistory.map(r => parseFloat(r.range)).reduce((a,b)=>a+b,0) / appHistory.length;
-        let UCL = grandMean + (0.266 * avgRange); 
-        let LCL = grandMean - (0.266 * avgRange);
-
-        let yUCL = getY(UCL);
-        let yLCL = getY(LCL);
-
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
-        ctx.fillRect(padX, yUCL, plotW, zGreenTop - yUCL); 
-        ctx.fillRect(padX, zGreenBot, plotW, yLCL - zGreenBot); 
-
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
-        ctx.fillRect(padX, padY, plotW, yUCL - padY); 
-        ctx.fillRect(padX, yLCL, plotW, plotH - (yLCL - padY)); 
-
-        ctx.strokeStyle = '#e2e8f0'; ctx.fillStyle = '#64748b'; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'right';
-        for(let i=0; i<=6; i++) {
-            let v = yTop - (i*(yTop-yBot)/6); let y = getY(v);
-            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w-padX, y); ctx.stroke();
-            ctx.fillText(v.toFixed(4), padX-12, y+4);
-        }
-
-        ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
-        ctx.strokeStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(padX, yUCL); ctx.lineTo(w-padX, yUCL); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(padX, yLCL); ctx.lineTo(w-padX, yLCL); ctx.stroke();
-        
-        ctx.strokeStyle = 'var(--text-main)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(padX, getY(grandMean)); ctx.lineTo(w-padX, getY(grandMean)); ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.fillStyle = '#ef4444'; ctx.textAlign = 'left';
-        ctx.fillText(`UCL: ${UCL.toFixed(4)}`, w - padX + 12, yUCL+4);
-        ctx.fillText(`LCL: ${LCL.toFixed(4)}`, w - padX + 12, yLCL+4);
-        ctx.fillStyle = 'var(--text-main)';
-        ctx.fillText(`AVG: ${grandMean.toFixed(4)}`, w - padX + 12, getY(grandMean)+4);
-
-        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2.5; ctx.beginPath();
-        appHistory.forEach((r, i) => i===0 ? ctx.moveTo(getX(i), getY(parseFloat(r.mean))) : ctx.lineTo(getX(i), getY(parseFloat(r.mean))));
-        ctx.stroke();
-
-        spcRenderData = []; 
-
-        appHistory.forEach((r, i) => {
-            let x = getX(i);
-            let yMax = getY(parseFloat(r.max));
-            let yMin = getY(parseFloat(r.min));
-            let yMean = getY(parseFloat(r.mean));
-
-            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(x, yMax, 5, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(x, yMin, 5, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(x, yMean, 7, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
-
-            ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.font = '600 11px sans-serif';
-            let dStr = r.date.split('/')[0] + '/' + r.date.split('/')[1];
-            ctx.fillText(dStr, x, h - 20);
-
-            spcRenderData.push({ x: x, data: r, runIdx: i+1 });
-        });
-
-        canvas.onmousemove = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left);
-            const tooltip = document.getElementById('spc-tooltip');
-            
-            let closest = null; let minDx = Infinity;
-            for(let slice of spcRenderData) {
-                let dx = Math.abs(slice.x - x);
-                if(dx < minDx && dx < 30) { minDx = dx; closest = slice; }
-            }
-
-            if(closest) {
-                let r = closest.data;
-                tooltip.innerHTML = `
-                    <div class="tt-head">Run #${closest.runIdx} - ${r.date} ${r.time}</div>
-                    <div class="tt-row"><span>Operator:</span> <span class="val">${r.op}</span></div>
-                    <div class="tt-row"><span>Tool ID:</span> <span class="val">${r.toolId || 'N/A'}</span></div>
-                    <div class="tt-row"><span>Batch:</span> <span class="val">${r.batch}</span></div>
-                    <div class="tt-row" style="margin-top:10px;"><span>Max Height:</span> <span class="val" style="color:var(--danger)">${r.max}"</span></div>
-                    <div class="tt-row"><span>Process Mean:</span> <span class="val" style="color:var(--text-main)">${r.mean}"</span></div>
-                    <div class="tt-row"><span>Min Height:</span> <span class="val" style="color:#3b82f6">${r.min}"</span></div>
-                    <div class="tt-row" style="margin-top:10px;"><span>Measured Range:</span> <span class="val">${r.range}"</span></div>
-                    <div class="tt-row"><span>Status:</span> <span class="val" style="color: ${r.status === 'PASS' ? 'var(--success)' : 'var(--danger)'}">${r.status}</span></div>
-                `;
-                tooltip.style.opacity = '1';
-                
-                let ttX = e.clientX + 20; let ttY = e.clientY + 20;
-                if (ttX + 300 > window.innerWidth) ttX = e.clientX - 310;
-                if (ttY + 240 > window.innerHeight) ttY = e.clientY - 250;
-                
-                tooltip.style.left = ttX + 'px';
-                tooltip.style.top = ttY + 'px';
-            } else {
-                tooltip.style.opacity = '0';
-            }
-        };
-        canvas.onmouseleave = () => { document.getElementById('spc-tooltip').style.opacity = '0'; };
-    }
-
-    // --- LOGISTICS & PERSISTENCE ---
-    function renderLogTable() {
-        let t = document.getElementById('logBody'); t.innerHTML = '';
-        let reversed = appHistory.slice().reverse();
-        reversed.forEach((r, i) => {
-            let origIndex = appHistory.length - 1 - i;
-            t.innerHTML += `<tr class="clickable-row" onclick="viewHistoryRun(${origIndex})" title="Click to view full dashboard">
-                <td>${r.date} ${r.time}</td>
-                <td>${r.op}</td>
-                <td>${r.toolId || '-'}</td>
-                <td>${r.batch}</td>
-                <td style="font-weight: 700;">${r.range}</td>
-                <td style="font-weight: 600;">${r.mean}</td>
-                <td style="font-weight: 600;">${r.cpk}</td>
-                <td style="color:${r.status==='PASS'?'var(--success)':'var(--danger)'}; font-weight:700;">${r.status}</td>
-            </tr>`;
-        });
-    }
-
-    function clearHistory() {
-        if(confirm("Permanently delete all local historical audit logs?")) {
-            appHistory = [];
-            localStorage.removeItem('punch_excel_history_v10');
-            renderLogTable();
-            renderSpcChart();
-            calculateGlobalStats();
-            showToast("Local History Cleared.");
-        }
-    }
+    function closeModal() { document.getElementById('historyModal').classList.add('hidden'); }
+    window.addEventListener('click', function(e) { if (e.target === document.getElementById('historyModal')) closeModal(); });
 
     function exportJsonData() {
         if(appHistory.length === 0) return showToast("No runs recorded to backup.", "error");
@@ -1745,16 +2857,14 @@
         let downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
         let dateStr = new Date().toISOString().slice(0,10);
-        downloadAnchorNode.setAttribute("download", `Precision_Audit_Backup_${dateStr}.json`);
+        downloadAnchorNode.setAttribute("download", `PunchOptPro_Audit_Backup_${dateStr}.json`);
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
         showToast("JSON Backup downloaded successfully.", "success");
     }
 
-    function importJsonData() {
-        document.getElementById('importJsonFile').click();
-    }
+    function importJsonData() { document.getElementById('importJsonFile').click(); }
 
     function processJsonImport(event) {
         let file = event.target.files[0];
@@ -1765,7 +2875,7 @@
                 let importedData = JSON.parse(e.target.result);
                 if(Array.isArray(importedData)) {
                     appHistory = importedData;
-                    localStorage.setItem('punch_excel_history_v10', JSON.stringify(appHistory));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(appHistory));
                     renderLogTable(); 
                     calculateGlobalStats(); 
                     renderSpcChart();
@@ -1781,6 +2891,18 @@
         reader.readAsText(file);
     }
 
+    function sendEmailToFlow() { sendEmailTemplate("[PUNCH-AUDIT-DATA]"); }
+    function sendEmailToFlowNatoli() { sendEmailTemplate("[NATOLI-AUDIT-DATA]"); }
+
+    function sendEmailTemplate(subjectTag) {
+        if (!latestRunRecord) return showToast("Verify a run first!", "error");
+        const payload = { ...latestRunRecord, componentsJSON: JSON.stringify(latestRunRecord.components) };
+        const subject = encodeURIComponent(subjectTag);
+        const body = encodeURIComponent(JSON.stringify(payload));
+        window.location.href = `mailto:shubham.sah@se.com?subject=${subject}&body=${body}`;
+        showToast("Email template generated.", "success");
+    }
+
     function exportToAdvancedExcel() {
         if(appHistory.length === 0) return showToast("No runs recorded to export.", "error");
 
@@ -1788,12 +2910,12 @@
             const wb = XLSX.utils.book_new();
 
             const summaryData = [
-                ["Run Date", "Time", "Operator", "Shift", "Tool ID", "Batch #", "Press #", "Part #", "Number of Sets", "Range Spec", "Measured Range", "Mean", "Max", "Min", "Cpk", "Status"]
+                ["Run Date", "Time", "Run Type", "Operator", "Shift", "Tool ID", "Batch #", "Press #", "Part #", "Number of Sets", "Range Spec", "Measured Range", "Mean", "Max", "Min", "Cpk", "Status"]
             ];
             
             appHistory.forEach(r => {
                 summaryData.push([
-                    r.date, r.time, r.op, r.shift, r.toolId || "N/A", r.batch, r.press, r.part, r.numSets || 12,
+                    r.date, r.time, r.type || "PUNCH", r.op, r.shift, r.toolId || "N/A", r.batch, r.press, r.part, r.numSets || 12,
                     parseFloat(r.rangeSpec), parseFloat(r.range), parseFloat(r.mean), parseFloat(r.max), parseFloat(r.min), parseFloat(r.cpk), r.status
                 ]);
             });
@@ -1804,6 +2926,7 @@
             appHistory.forEach((r, index) => {
                 const sheetData = [
                     ["METADATA"],
+                    ["Run Type", (r.type || "PUNCH").toUpperCase()],
                     ["Date", r.date],
                     ["Time", r.time],
                     ["Operator Name", r.op],
@@ -1816,35 +2939,43 @@
                     ["Part Tolerance", r.partTol],
                     ["Assembly Tolerance", r.assemblyTol || "N/A"],
                     [],
-                    ["PUNCH SETUP"],
-                    ["Range Spec (Max Spread)", r.rangeSpec],
-                    [],
-                    ["Set / Station #", "Punch Length", "Holder Length", "Measured Combined Height"]
+                    ["SPECIFICATIONS & STATISTICS"],
+                    ["Range Spec (Max Spread)", parseFloat(r.rangeSpec)],
+                    ["Measured Range", parseFloat(r.range)],
+                    ["Maximum Length", parseFloat(r.max)],
+                    ["Minimum Length", parseFloat(r.min)],
+                    ["Process Mean", parseFloat(r.mean)],
+                    ["Setup Status", r.status],
+                    []
                 ];
 
-                if(r.components && r.components.length > 0) {
-                    r.components.forEach(c => {
-                        sheetData.push([ c.setId, parseFloat(c.pVal), parseFloat(c.hVal), parseFloat(c.val) ]);
-                    });
+                if(r.type === 'Die') {
+                    sheetData.push(["DIE MEASUREMENTS"]);
+                    sheetData.push(["Die Station #", "Measured Thickness"]);
+                    if(r.components && r.components.length > 0) {
+                        r.components.forEach(c => sheetData.push([ c.setId, parseFloat(c.val) ]));
+                    }
                 } else {
-                    sheetData.push(["Data unavailable", "", "", ""]);
+                    let lblA = r.type === 'Natoli' ? 'Upper' : 'Holder';
+                    let lblB = r.type === 'Natoli' ? 'Lower' : 'Punch';
+                    sheetData.push(["ASSEMBLY MEASUREMENTS"]);
+                    sheetData.push([`Station #`, `${lblA} Length`, `${lblB} Length`, `Target Height`, `Measured Actual Height`]);
+                    if(r.components && r.components.length > 0) {
+                        r.components.forEach(c => {
+                            let target = parseFloat(c.pVal) + parseFloat(c.hVal);
+                            sheetData.push([ c.setId, parseFloat(c.hVal), parseFloat(c.pVal), target, parseFloat(c.val) ]);
+                        });
+                    }
                 }
 
-                sheetData.push([]);
-                sheetData.push(["STATISTICS"]);
-                sheetData.push(["Measured Range", parseFloat(r.range)]);
-                sheetData.push(["Maximum Length", parseFloat(r.max)]);
-                sheetData.push(["Minimum Length", parseFloat(r.min)]);
-                sheetData.push(["Process Mean", parseFloat(r.mean)]);
-                sheetData.push(["Setup Status", r.status]);
-
                 const ws = XLSX.utils.aoa_to_sheet(sheetData);
-                let sheetName = `Run ${index + 1} - Batch ${r.batch}`.substring(0, 31);
+                let safeDate = r.date.replace(/\//g, '');
+                let sheetName = `Run ${index + 1} - ${r.type.substring(0,3)} ${safeDate}`.substring(0, 31);
                 XLSX.utils.book_append_sheet(wb, ws, sheetName);
             });
 
             let dateStr = new Date().toISOString().slice(0,10);
-            XLSX.writeFile(wb, `Precision_Assembly_Audit_${dateStr}.xlsx`);
+            XLSX.writeFile(wb, `Precision_Assembly_Audit_Pro_${dateStr}.xlsx`);
             showToast("Excel Workbook Exported Successfully", "success");
 
         } catch (err) {
